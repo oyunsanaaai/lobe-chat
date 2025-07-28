@@ -124,6 +124,7 @@ export const INITIAL_STATUS = {
   hideThreadLimitAlert: false,
   imagePanelWidth: 320,
   imageTopicPanelWidth: 80,
+  isEnablePglite: true,
   mobileShowTopic: false,
   noWideScreen: true,
   portalWidth: 400,

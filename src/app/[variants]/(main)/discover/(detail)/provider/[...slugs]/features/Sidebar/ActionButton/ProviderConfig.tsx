@@ -9,8 +9,6 @@ import { useRouter } from 'nextjs-toploader/app';
 import { memo } from 'react';
 import { useTranslation } from 'react-i18next';
 
-import { isDeprecatedEdition } from '@/const/version';
-
 import { useDetailContext } from '../../DetailProvider';
 
 const useStyles = createStyles(({ css }) => ({
@@ -27,10 +25,7 @@ const ProviderConfig = memo(() => {
   const { url, modelsUrl, identifier } = useDetailContext();
   const router = useRouter();
   const openSettings = () => {
-    router.push(
-      isDeprecatedEdition
-        ? '/settings?active=llm'
-        : `/settings?active=provider&provider=${identifier}`,
+    router.push(`/settings?active=provider&provider=${identifier}`,
     );
   };
 

@@ -8,7 +8,6 @@ import { useTranslation } from 'react-i18next';
 import { Flexbox } from 'react-layout-kit';
 
 import { ModelItemRender, ProviderItemRender } from '@/components/ModelSelect';
-import { isDeprecatedEdition } from '@/const/version';
 import { useAiInfraStore } from '@/store/aiInfra';
 import { aiProviderSelectors } from '@/store/aiInfra/slices/aiProvider/selectors';
 import { useImageStore } from '@/store/image';
@@ -65,10 +64,7 @@ const ModelSelect = memo(() => {
               </Flexbox>
             ),
             onClick: () => {
-              router.push(
-                isDeprecatedEdition
-                  ? '/settings?active=llm'
-                  : `/settings?active=provider&provider=${provider.id}`,
+              router.push(`/settings?active=provider&provider=${provider.id}`,
               );
             },
             value: `${provider.id}/empty`,
@@ -91,7 +87,7 @@ const ModelSelect = memo(() => {
             </Flexbox>
           ),
           onClick: () => {
-            router.push(isDeprecatedEdition ? '/settings?active=llm' : '/settings?active=provider');
+            router.push('/settings?active=provider');
           },
           value: 'no-provider',
         },
@@ -114,10 +110,7 @@ const ModelSelect = memo(() => {
           />
           {showLLM && (
             <Link
-              href={
-                isDeprecatedEdition
-                  ? '/settings?active=llm'
-                  : `/settings?active=provider&provider=${provider.id}`
+              href={`/settings?active=provider&provider=${provider.id}`
               }
             >
               <ActionIcon

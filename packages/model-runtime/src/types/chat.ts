@@ -85,7 +85,6 @@ export interface ChatStreamPayload {
    * @title 返回的文本数量
    */
   n?: number;
-  response_format?: ChatResponseFormat;
   /**
    * @title 控制生成文本中的惩罚系数，用于减少主题的变化
    * @default 0
@@ -98,6 +97,7 @@ export interface ChatStreamPayload {
   };
   reasoning_effort?: 'minimal' | 'low' | 'medium' | 'high';
   responseMode?: 'stream' | 'json';
+  response_format?: ChatResponseFormat;
   /**
    * @title 是否开启流式请求
    * @default true

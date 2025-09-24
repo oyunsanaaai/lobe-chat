@@ -273,8 +273,6 @@ export const chatAiGroupChat: StateCreator<
           useChatGroupStore.getState(),
         );
 
-        console.log('sendGroupMessage / groupConfig', groupConfig);
-
         // If supervisor is disabled, check for direct mentions and trigger them directly
         if (!groupConfig?.enableSupervisor) {
           const mentionedAgentIds = extractMentionsFromContent(message);
@@ -654,8 +652,9 @@ export const chatAiGroupChat: StateCreator<
             threadId: undefined,
             inPortalThread: false,
           });
-          // After tool calls complete, trigger supervisor decision to continue conversation
-          internal_triggerSupervisorDecisionDebounced(groupId);
+          // Change: if an agent message is a tool call, make the same agent speak again
+          // instead of asking supervisor for a decision.
+          await get().internal_processAgentMessage(groupId, agentId, targetId, instruction);
           return;
         }
       }

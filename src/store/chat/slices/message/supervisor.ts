@@ -24,7 +24,7 @@ export interface SupervisorDecisionResult {
   todos: SupervisorTodoItem[];
 }
 
-export type SupervisorToolName = 'create_todo' | 'finish_todo' | 'trigger_agent';
+export type SupervisorToolName = 'create_todo' | 'finish_todo' | 'trigger_agent' | 'trigger_agent_dm';
 
 export interface SupervisorToolCall {
   parameter?: unknown;
@@ -101,27 +101,101 @@ export class GroupChatSupervisor {
       temperature: 0.3,
     };
 
-    // Build trigger_agent schema conditionally based on allowDM
-    const triggerAgentProperties: Record<string, any> = {
-      id: {
-        description: 'The agent id to trigger.',
-        type: 'string',
+    // Build tool schemas. Use a separate DM tool instead of dynamic target.
+    const triggerAgentSchema = {
+      additionalProperties: false,
+      description: 'Trigger an agent to speak (group message).',
+      properties: {
+        id: {
+          description: 'The agent id to trigger.',
+          type: 'string',
+        },
+        instruction: {
+          type: 'string',
+        },
       },
-      instruction: {
-        type: 'string',
+      required: ['instruction', 'id'],
+      type: 'object',
+    } as const;
+
+    const triggerAgentDmSchema = {
+      additionalProperties: false,
+      description: 'Trigger an agent to DM another agent or user.',
+      properties: {
+        id: {
+          description: 'The agent id to trigger.',
+          type: 'string',
+        },
+        target: {
+          description: 'The target agent id. Only used when need DM.',
+          type: 'string',
+        },
+        instruction: {
+          type: 'string',
+        },
       },
-    };
+      required: ['instruction', 'id', 'target'],
+      type: 'object',
+    } as const;
 
-    const triggerAgentRequired = ['instruction', 'id'];
+    const toolNameEnum: SupervisorToolName[] = context.allowDM
+      ? ['create_todo', 'finish_todo', 'trigger_agent', 'trigger_agent_dm']
+      : ['create_todo', 'finish_todo', 'trigger_agent'];
 
-    // Only include target field when DM is allowed
-    if (context.allowDM) {
-      triggerAgentProperties.target = {
-        description: 'The target agent id. Only used when need DM.',
-        type: 'string',
-      };
-      triggerAgentRequired.push('target');
-    }
+    const parameterAnyOf = context.allowDM
+      ? [
+          {
+            additionalProperties: false,
+            description: 'Create a new todo item',
+            properties: {
+              content: {
+                description: 'The todo content or description.',
+                type: 'string',
+              },
+            },
+            required: ['content'],
+            type: 'object',
+          },
+          triggerAgentSchema,
+          triggerAgentDmSchema,
+          {
+            additionalProperties: false,
+            description: 'Finish a todo by index or all todos',
+            properties: {
+              index: {
+                type: 'number',
+              },
+            },
+            required: ['index'],
+            type: 'object',
+          },
+        ]
+      : [
+          {
+            additionalProperties: false,
+            description: 'Create a new todo item',
+            properties: {
+              content: {
+                description: 'The todo content or description.',
+                type: 'string',
+              },
+            },
+            required: ['content'],
+            type: 'object',
+          },
+          triggerAgentSchema,
+          {
+            additionalProperties: false,
+            description: 'Finish a todo by index or all todos',
+            properties: {
+              index: {
+                type: 'number',
+              },
+            },
+            required: ['index'],
+            type: 'object',
+          },
+        ];
 
     const responseFormat = {
       name: 'supervisor_decision',
@@ -131,41 +205,10 @@ export class GroupChatSupervisor {
             additionalProperties: false,
             properties: {
               parameter: {
-                anyOf: [
-                  {
-                    additionalProperties: false,
-                    description: 'Create a new todo item',
-                    properties: {
-                      content: {
-                        description: 'The todo content or description.',
-                        type: 'string',
-                      },
-                    },
-                    required: ['content'],
-                    type: 'object',
-                  },
-                  {
-                    additionalProperties: false,
-                    description: 'Trigger an agent to speak',
-                    properties: triggerAgentProperties,
-                    required: triggerAgentRequired,
-                    type: 'object',
-                  },
-                  {
-                    additionalProperties: false,
-                    description: 'Finish a todo by index or all todos',
-                    properties: {
-                      index: {
-                        type: 'number',
-                      },
-                    },
-                    required: ['index'],
-                    type: 'object',
-                  },
-                ],
+                anyOf: parameterAnyOf as any,
               },
               tool_name: {
-                enum: ['create_todo', 'finish_todo', 'trigger_agent'],
+                enum: toolNameEnum,
                 type: 'string',
               },
             },
@@ -336,7 +379,10 @@ export class GroupChatSupervisor {
 
     // Since we constrained the JSON schema, we expect a specific format
     const toolName = raw.tool_name;
-    if (typeof toolName !== 'string' || !['create_todo', 'finish_todo', 'trigger_agent'].includes(toolName)) {
+    if (
+      typeof toolName !== 'string' ||
+      !['create_todo', 'finish_todo', 'trigger_agent', 'trigger_agent_dm'].includes(toolName)
+    ) {
       return null;
     }
 
@@ -374,7 +420,8 @@ export class GroupChatSupervisor {
           todoUpdated = todoUpdated || changed;
           break;
         }
-        case 'trigger_agent': {
+        case 'trigger_agent':
+        case 'trigger_agent_dm': {
           const decision = this.buildDecisionFromTool(call.parameter, availableAgents, context);
           if (decision) {
             decisions.push(decision);

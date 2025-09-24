@@ -1,6 +1,6 @@
-import { Collapse, Text } from '@lobehub/ui';
+import { Collapse, Icon, Text } from '@lobehub/ui';
 import { createStyles, useTheme } from 'antd-style';
-import { CheckCircle, Circle } from 'lucide-react';
+import { CheckCircle, Circle, ListCheck } from 'lucide-react';
 import { memo } from 'react';
 import { useTranslation } from 'react-i18next';
 import { Center, Flexbox } from 'react-layout-kit';
@@ -9,6 +9,12 @@ import { SupervisorTodoItem } from '@/store/chat/slices/message/supervisor';
 
 const useStyles = createStyles(({ css, token }) => ({
   collapse: css`
+    padding: 0 ${token.paddingXS}px;
+
+    .ant-collapse-content-box {
+      padding: 0;
+    }
+
     .ant-collapse-header {
       padding: 0 !important;
       color: ${token.colorTextTertiary};
@@ -42,8 +48,9 @@ const TodoList = memo<TodoListProps>(({ data }) => {
   // Create the header with progress indicator
   const headerContent = (
     <Flexbox align="center" gap={8} horizontal width="200px">
+      <Icon color={theme.colorTextTertiary} icon={ListCheck} size={16} />
       <Text color={theme.colorTextTertiary} weight={400}>
-        {completedCount}/{totalCount} {t('supervisor.todoList.title')}
+        {completedCount} / {totalCount} {t('supervisor.todoList.title')}
       </Text>
     </Flexbox>
   );
@@ -110,7 +117,6 @@ const TodoList = memo<TodoListProps>(({ data }) => {
           label: headerContent,
         },
       ]}
-      padding={{ body: 0 }}
       size="small"
       styles={{
         header: {

@@ -109,8 +109,8 @@ export default {
     noTemplateMembers: '模板中没有成员',
     noTemplates: '没有可用的模板',
     searchTemplates: '搜索模板...',
-    useTemplate: '使用模板',
     title: '创建群聊',
+    useTemplate: '使用模板',
   },
 
   hideForYou: '私信内容已经隐藏，请在设置中开启【显示私信内容】以查看',
@@ -343,6 +343,12 @@ export default {
     loading: '识别中...',
     prettifying: '润色中...',
   },
+  supervisor: {
+    todoList: {
+      allComplete: '所有任务已完成',
+      title: '任务已完成',
+    },
+  },
   thread: {
     divider: '子话题',
     threadMessageCount: '{{messageCount}} 条消息',
@@ -377,12 +383,6 @@ export default {
   translate: {
     action: '翻译',
     clear: '删除翻译',
-  },
-  supervisor: {
-    todoList: {
-      allComplete: '所有任务已完成',
-      title: '任务列表',
-    },
   },
   tts: {
     action: '语音朗读',

@@ -1,11 +1,24 @@
 import { Collapse, Text } from '@lobehub/ui';
-import { useTheme } from 'antd-style';
+import { createStyles, useTheme } from 'antd-style';
 import { CheckCircle, Circle } from 'lucide-react';
 import { memo } from 'react';
 import { useTranslation } from 'react-i18next';
 import { Center, Flexbox } from 'react-layout-kit';
 
 import { SupervisorTodoItem } from '@/store/chat/slices/message/supervisor';
+
+const useStyles = createStyles(({ css, token }) => ({
+  collapse: css`
+    .ant-collapse-header {
+      padding: 0 !important;
+      color: ${token.colorTextTertiary};
+    }
+
+    .ant-collapse-expand-icon {
+      color: ${token.colorTextTertiary} !important;
+    }
+  `,
+}));
 
 export interface TodoData {
   timestamp: number;
@@ -20,6 +33,7 @@ export interface TodoListProps {
 const TodoList = memo<TodoListProps>(({ data }) => {
   const { t } = useTranslation('chat');
   const theme = useTheme();
+  const { styles } = useStyles();
 
   const { todos } = data;
   const completedCount = todos.filter((todo) => todo.finished).length;
@@ -28,9 +42,8 @@ const TodoList = memo<TodoListProps>(({ data }) => {
   // Create the header with progress indicator
   const headerContent = (
     <Flexbox align="center" gap={8} horizontal width="200px">
-      <Text>
-        {t('supervisor.todoList.title')}
-        {completedCount}/{totalCount}
+      <Text color={theme.colorTextTertiary} weight={400}>
+        {completedCount}/{totalCount} {t('supervisor.todoList.title')}
       </Text>
     </Flexbox>
   );
@@ -88,7 +101,7 @@ const TodoList = memo<TodoListProps>(({ data }) => {
 
   return (
     <Collapse
-      defaultActiveKey={['todos']}
+      className={styles.collapse}
       expandIconPosition="end"
       items={[
         {
@@ -102,7 +115,6 @@ const TodoList = memo<TodoListProps>(({ data }) => {
       styles={{
         header: {
           fontSize: theme.fontSize,
-          padding: '0px',
         },
       }}
       variant="borderless"

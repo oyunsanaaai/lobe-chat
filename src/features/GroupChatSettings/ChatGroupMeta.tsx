@@ -20,10 +20,12 @@ const ChatGroupMeta = memo(() => {
 
   const updateMeta = useStore((s) => s.updateGroupMeta);
   const meta = useStore(selectors.currentMetaConfig, isEqual) || {};
+  const updateConfig = useStore((s) => s.updateGroupConfig);
+  const config = useStore(selectors.currentChatConfig, isEqual) || {};
 
   useUpdateEffect(() => {
-    form.setFieldsValue(meta);
-  }, [meta]);
+    form.setFieldsValue({ ...meta, scene: config.scene });
+  }, [meta, config?.scene]);
 
   const groupSettings: FormGroupItemType = {
     children: [
@@ -82,10 +84,16 @@ const ChatGroupMeta = memo(() => {
         />
       }
       form={form}
-      initialValues={meta}
+      initialValues={{ ...meta, scene: config.scene }}
       items={[groupSettings]}
       itemsType={'group'}
-      onFinish={updateMeta}
+      onFinish={async (values) => {
+        const { scene, ...metaPayload } = values as any;
+        await updateMeta(metaPayload);
+        if (scene && scene !== config.scene) {
+          await updateConfig({ scene });
+        }
+      }}
       variant={'borderless'}
       {...FORM_STYLE}
     />

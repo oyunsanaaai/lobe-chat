@@ -6,16 +6,16 @@ import {
 } from '@/types/chatGroup';
 
 export const DEFAULT_CHAT_GROUP_CHAT_CONFIG: LobeChatGroupChatConfig = {
-    allowDM: true,
-    enableSupervisor: true,
-    maxResponseInRow: 10,
-    orchestratorModel: DEFAULT_MODEL,
-    orchestratorProvider: DEFAULT_PROVIDER,
-    responseOrder: 'natural',
-    responseSpeed: 'fast',
-    revealDM: false,
-    scene: 'casual',
-    systemPrompt: '',
+  allowDM: true,
+  enableSupervisor: true,
+  maxResponseInRow: 10,
+  orchestratorModel: DEFAULT_MODEL,
+  orchestratorProvider: DEFAULT_PROVIDER,
+  responseOrder: 'natural',
+  responseSpeed: 'fast',
+  revealDM: false,
+  scene: 'productive',
+  systemPrompt: '',
 };
 
 export const DEFAULT_CHAT_GROUP_META_CONFIG: LobeChatGroupMetaConfig = {

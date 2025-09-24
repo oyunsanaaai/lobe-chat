@@ -39,6 +39,8 @@ export interface SupervisorContext {
   messages: ChatMessage[];
   model: string;
   provider: string;
+  // Group scene controls which tools are exposed (e.g., todos only in 'productive')
+  scene?: 'casual' | 'productive';
   systemPrompt?: string;
   todoList?: SupervisorTodoItem[];
   userName?: string;
@@ -138,64 +140,43 @@ export class GroupChatSupervisor {
       type: 'object',
     } as const;
 
-    const toolNameEnum: SupervisorToolName[] = context.allowDM
-      ? ['create_todo', 'finish_todo', 'trigger_agent', 'trigger_agent_dm']
-      : ['create_todo', 'finish_todo', 'trigger_agent'];
+    const enableTodo = context.scene === 'productive';
+    const toolNameEnumBase: SupervisorToolName[] = ['trigger_agent'];
+    const withDM = context.allowDM ? (['trigger_agent_dm'] as SupervisorToolName[]) : ([] as SupervisorToolName[]);
+    const withTodo = enableTodo
+      ? (['create_todo', 'finish_todo'] as SupervisorToolName[])
+      : ([] as SupervisorToolName[]);
+    const toolNameEnum: SupervisorToolName[] = [...toolNameEnumBase, ...withDM, ...withTodo];
 
-    const parameterAnyOf = context.allowDM
-      ? [
-          {
-            additionalProperties: false,
-            description: 'Create a new todo item',
-            properties: {
-              content: {
-                description: 'The todo content or description.',
-                type: 'string',
-              },
-            },
-            required: ['content'],
-            type: 'object',
-          },
-          triggerAgentSchema,
-          triggerAgentDmSchema,
-          {
-            additionalProperties: false,
-            description: 'Finish a todo by index or all todos',
-            properties: {
-              index: {
-                type: 'number',
-              },
-            },
-            required: ['index'],
-            type: 'object',
-          },
-        ]
-      : [
-          {
-            additionalProperties: false,
-            description: 'Create a new todo item',
-            properties: {
-              content: {
-                description: 'The todo content or description.',
-                type: 'string',
-              },
-            },
-            required: ['content'],
-            type: 'object',
-          },
-          triggerAgentSchema,
-          {
-            additionalProperties: false,
-            description: 'Finish a todo by index or all todos',
-            properties: {
-              index: {
-                type: 'number',
-              },
-            },
-            required: ['index'],
-            type: 'object',
-          },
-        ];
+    const todoCreateSchema = {
+      additionalProperties: false,
+      description: 'Create a new todo item',
+      properties: {
+        content: {
+          description: 'The todo content or description.',
+          type: 'string',
+        },
+      },
+      required: ['content'],
+      type: 'object',
+    } as const;
+
+    const todoFinishSchema = {
+      additionalProperties: false,
+      description: 'Finish a todo by index or all todos',
+      properties: {
+        index: {
+          type: 'number',
+        },
+      },
+      required: ['index'],
+      type: 'object',
+    } as const;
+
+    const baseSchemas: any[] = [triggerAgentSchema];
+    const dmSchemas: any[] = context.allowDM ? [triggerAgentDmSchema] : [];
+    const todoSchemas: any[] = enableTodo ? [todoCreateSchema, todoFinishSchema] : [];
+    const parameterAnyOf = [...baseSchemas, ...dmSchemas, ...todoSchemas];
 
     const responseFormat = {
       name: 'supervisor_decision',
@@ -411,13 +392,17 @@ export class GroupChatSupervisor {
     toolCalls.forEach((call) => {
       switch (call.tool_name) {
         case 'create_todo': {
-          const changed = this.applyCreateTodo(todos, call.parameter);
-          todoUpdated = todoUpdated || changed;
+          if (context.scene === 'productive') {
+            const changed = this.applyCreateTodo(todos, call.parameter);
+            todoUpdated = todoUpdated || changed;
+          }
           break;
         }
         case 'finish_todo': {
-          const changed = this.applyFinishTodo(todos, call.parameter);
-          todoUpdated = todoUpdated || changed;
+          if (context.scene === 'productive') {
+            const changed = this.applyFinishTodo(todos, call.parameter);
+            todoUpdated = todoUpdated || changed;
+          }
           break;
         }
         case 'trigger_agent':

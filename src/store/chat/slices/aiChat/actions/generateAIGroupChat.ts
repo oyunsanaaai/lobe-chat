@@ -394,6 +394,7 @@ export const chatAiGroupChat: StateCreator<
         messages,
         model: groupConfig.orchestratorModel || 'gemini-2.5-flash',
         provider: groupConfig.orchestratorProvider || 'google',
+        scene: groupConfig.scene,
         userName: realUserName,
         systemPrompt: groupConfig.systemPrompt,
         abortController,
@@ -524,7 +525,6 @@ export const chatAiGroupChat: StateCreator<
       internal_dispatchMessage,
       internal_toggleChatLoading,
       triggerToolCalls,
-      internal_triggerSupervisorDecisionDebounced,
     } = get();
 
     try {

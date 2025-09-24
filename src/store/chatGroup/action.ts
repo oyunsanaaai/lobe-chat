@@ -244,8 +244,31 @@ export const chatGroupAction: StateCreator<
         ...group.config,
         ...config,
       };
+
+      // Update the database first
       await chatGroupService.updateGroup(group.id, { config: mergedConfig });
+
+      // Immediately update the local store to ensure configuration is available
       dispatch({ payload: { config: mergedConfig, id: group.id }, type: 'updateGroup' });
+
+      // Also update the chat store's groupMaps to keep it in sync
+      const chatState = getChatStoreState();
+      if (chatState.groupMaps[group.id]) {
+        useChatStore.setState(
+          produce((draft: ChatStoreState) => {
+            if (draft.groupMaps[group.id]) {
+              draft.groupMaps[group.id] = {
+                ...draft.groupMaps[group.id],
+                config: mergedConfig,
+              };
+            }
+          }),
+          false,
+          n('updateGroupConfig/syncChatStore'),
+        );
+      }
+
+      // Refresh groups to ensure consistency
       await get().internal_refreshGroups();
     },
 

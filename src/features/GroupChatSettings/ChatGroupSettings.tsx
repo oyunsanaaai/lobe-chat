@@ -55,7 +55,7 @@ const ChatGroupSettings = memo(() => {
     },
   ];
 
-  const orchestratorSettings: FormGroupItemType = {
+  const supervisorOptions: FormGroupItemType = {
     children: [
       {
         children: <Switch />,
@@ -91,7 +91,7 @@ const ChatGroupSettings = memo(() => {
     title: t('settingGroupChat.orchestratorTitle'),
   };
 
-  const chatSettings: FormGroupItemType = {
+  const chatOptions: FormGroupItemType = {
     children: [
       {
         children: <Segmented options={responseSpeedOptions} />,
@@ -167,7 +167,7 @@ const ChatGroupSettings = memo(() => {
         },
         enableSupervisor: config?.enableSupervisor ?? true,
       }}
-      items={[orchestratorSettings, ...(enableSupervisor ? [chatSettings] : [])]}
+      items={[supervisorOptions, ...(enableSupervisor ? [chatOptions] : [])]}
       itemsType={'group'}
       onFinish={async ({ _modelConfig, ...rest }) => {
         await updateConfig({

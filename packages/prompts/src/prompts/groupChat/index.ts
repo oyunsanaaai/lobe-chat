@@ -116,7 +116,7 @@ export const buildSupervisorPrompt = ({
 
   // Build rules and examples based on allowDM setting
   const dmRules = `- Direct messages are allowed. When an agent should DM someone, set "target" to the recipient agent id or "user".
-- If no "target" is provided, the message will be sent to the whole group.`;
+- If no "target" is provided, the message will be sent to the whole group. Only use DM whent the message MUST be private.`;
 
   const prompt = `
 You are a conversation supervisor for a group chat with multiple AI agents. Your role is to decide which agents should respond next based on the conversation context. Here's the group detail:

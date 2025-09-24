@@ -26,6 +26,9 @@ interface GroupMemberProps {
   sessionId?: string;
 }
 
+/**
+ * Group member info in Sidebar
+ */
 const GroupMember = memo<GroupMemberProps>(
   ({ currentSession, addModalOpen, onAddModalOpenChange, sessionId }) => {
     const { t } = useTranslation('chat');
@@ -40,7 +43,7 @@ const GroupMember = memo<GroupMemberProps>(
     const triggerSupervisorDecision = useChatStore((s) => s.internal_triggerSupervisorDecision);
 
     const isSupervisorLoading = useChatStore(chatSelectors.isSupervisorLoading(sessionId || ''));
-    const groupConfig = useChatGroupStore(chatGroupSelectors.currentGroupConfig);
+    const groupConfig = useChatGroupStore(chatGroupSelectors.getGroupConfig(sessionId || ''));
 
     const currentUser = useUserStore((s) => ({
       avatar: userProfileSelectors.userAvatar(s),
@@ -113,7 +116,7 @@ const GroupMember = memo<GroupMemberProps>(
     return (
       <>
         <Flexbox gap={2} padding={6}>
-          {/* Orchestrator - only show if supervisor is enabled */}
+          {/* Supervisor - only show if supervisor is enabled */}
           {groupConfig?.enableSupervisor && (
             <GroupMemberItem
               actions={

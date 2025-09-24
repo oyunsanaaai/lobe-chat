@@ -21,7 +21,7 @@ const useStyles = createStyles(({ css }) => ({
   `,
 }));
 
-const HOST_MEMBER_ID = 'host-member';
+const HOST_MEMBER_ID = 'supervisor';
 
 const GroupMembers = memo(() => {
   const { t } = useTranslation('setting');

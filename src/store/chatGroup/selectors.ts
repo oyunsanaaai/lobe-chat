@@ -18,19 +18,11 @@ const isGroupsLoading = (s: ChatGroupState): boolean => s.isGroupsLoading;
 
 const isGroupsInitialized = (s: ChatGroupState): boolean => s.groupsInit;
 
-const getCurrentSessionInfo = () => {
+const activeGroupId = (): string | undefined => {
   const sessionStore = useSessionStore.getState();
   const session = sessionSelectors.currentSession(sessionStore);
-  return {
-    isGroupSession: session?.type === 'group',
-    sessionId: sessionStore.activeId,
-    sessionType: session?.type as 'agent' | 'group' | undefined,
-  };
-};
 
-const activeGroupId = (): string | undefined => {
-  const { sessionId, sessionType } = getCurrentSessionInfo();
-  return sessionType === 'group' ? sessionId : undefined;
+  return session?.type === 'group' ? session.id : undefined;
 };
 
 const currentGroup = (s: ChatGroupStore): ChatGroupItem | undefined => {
@@ -49,12 +41,16 @@ const allGroups = (s: ChatStoreState): ChatGroupItem[] =>
 const groupsInitialized = (s: ChatStoreState): boolean => s.groupsInit;
 
 const getGroupConfig = (groupId: string) => (s: ChatGroupStore) => {
+  console.log('getGroupConfig / groupMap', s.groupMap);
+  console.log('getGroupConfig / groupId', groupId);
   const groupConfig = s.groupMap?.[groupId]?.config;
+  console.log('==> getGroupConfig / groupConfig', groupConfig);
   return merge(DEFAULT_CHAT_GROUP_CHAT_CONFIG, groupConfig || {});
 };
 
 const currentGroupConfig = (s: ChatGroupStore) => {
   const groupId = activeGroupId();
+  console.log('currentGroupConfig / groupId', groupId);
   return groupId ? getGroupConfig(groupId)(s) : DEFAULT_CHAT_GROUP_CHAT_CONFIG;
 };
 
@@ -78,6 +74,7 @@ export const chatGroupSelectors = {
   getAllGroups,
   getGroupById,
   getGroupByIdFromChatStore,
+  getGroupConfig,
   groupsInitialized,
   isGroupsInitialized,
   isGroupsLoading,

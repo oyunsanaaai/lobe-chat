@@ -299,7 +299,6 @@ export const chatAiGroupChat: StateCreator<
             console.log('Supervisor disabled and no mentions found, no agent responses triggered');
           }
         } else {
-          // Normal supervisor flow
           internal_triggerSupervisorDecisionDebounced(groupId);
         }
       }

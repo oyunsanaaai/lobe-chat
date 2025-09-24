@@ -143,7 +143,8 @@ export const chatGroupAction: StateCreator<
     },
 
     internal_updateGroupMaps: (groups) => {
-      const nextGroupMap = groups.reduce(
+      // Build a candidate map from incoming groups
+      const incomingMap = groups.reduce(
         (map, group) => {
           map[group.id] = group;
           return map;
@@ -151,22 +152,38 @@ export const chatGroupAction: StateCreator<
         {} as Record<string, ChatGroupItem>,
       );
 
-      set(
-        produce((state: ChatGroupState) => {
-          if (!isEqual(state.groupMap, nextGroupMap)) {
-            state.groupMap = nextGroupMap;
+      // Merge with existing map, preserving existing config if present
+      const mergedMap = produce(get().groupMap, (draft) => {
+        for (const id of Object.keys(incomingMap)) {
+          const incoming = incomingMap[id];
+          const existing = draft[id];
+          if (existing) {
+            draft[id] = {
+              ...existing,
+              ...incoming,
+              // Keep existing config (authoritative) if present; do not overwrite
+              config: existing.config || incoming.config,
+            } as ChatGroupItem;
+          } else {
+            draft[id] = incoming;
           }
-          state.groupsInit = true;
-          state.isGroupsLoading = false;
-        }),
+        }
+      });
+
+      set(
+        {
+          groupMap: mergedMap,
+          groupsInit: true,
+          isGroupsLoading: false,
+        },
         false,
         n('internal_updateGroupMaps/chatGroup'),
       );
 
       const chatState = getChatStoreState();
-      if (!isEqual(chatState.groupMaps, nextGroupMap)) {
+      if (!isEqual(chatState.groupMaps, mergedMap)) {
         useChatStore.setState(
-          { groupMaps: nextGroupMap, groupsInit: true },
+          { groupMaps: mergedMap, groupsInit: true },
           false,
           n('internal_updateGroupMaps/chat'),
         );
@@ -249,7 +266,11 @@ export const chatGroupAction: StateCreator<
       await chatGroupService.updateGroup(group.id, { config: mergedConfig });
 
       // Immediately update the local store to ensure configuration is available
-      dispatch({ payload: { config: mergedConfig, id: group.id }, type: 'updateGroup' });
+      // Note: reducer expects payload: { id, value }
+      dispatch({
+        payload: { id: group.id, value: { config: mergedConfig } },
+        type: 'updateGroup',
+      });
 
       // Also update the chat store's groupMaps to keep it in sync
       const chatState = getChatStoreState();
@@ -279,7 +300,8 @@ export const chatGroupAction: StateCreator<
       const id = group.id;
 
       await chatGroupService.updateGroup(id, meta);
-      dispatch({ payload: { id, meta }, type: 'updateGroup' });
+      // Keep local store in sync immediately
+      dispatch({ payload: { id, value: meta }, type: 'updateGroup' });
       await get().internal_refreshGroups();
     },
 

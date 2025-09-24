@@ -268,7 +268,12 @@ export const chatAiGroupChat: StateCreator<
       }
 
       if (messageId) {
-        const groupConfig = chatGroupSelectors.currentGroupConfig(useChatGroupStore.getState());
+        // Use the specific group's config rather than relying on active session
+        const groupConfig = chatGroupSelectors.getGroupConfig(groupId)(
+          useChatGroupStore.getState(),
+        );
+
+        console.log('sendGroupMessage / groupConfig', groupConfig);
 
         // If supervisor is disabled, check for direct mentions and trigger them directly
         if (!groupConfig?.enableSupervisor) {
@@ -347,7 +352,8 @@ export const chatAiGroupChat: StateCreator<
 
     if (messages.length === 0) return;
 
-    const groupConfig = chatGroupSelectors.currentGroupConfig(useChatGroupStore.getState());
+    // Always read config for the provided groupId
+    const groupConfig = chatGroupSelectors.getGroupConfig(groupId)(useChatGroupStore.getState());
 
     // If supervisor is disabled, skip supervisor decision
     if (!groupConfig?.enableSupervisor) {
@@ -443,7 +449,8 @@ export const chatAiGroupChat: StateCreator<
   internal_executeAgentResponses: async (groupId: string, decisions: SupervisorDecisionList) => {
     const { internal_processAgentMessage, internal_triggerSupervisorDecisionDebounced } = get();
 
-    const groupConfig = chatGroupSelectors.currentGroupConfig(useChatGroupStore.getState());
+    // Read the target group's config to respect per-group settings
+    const groupConfig = chatGroupSelectors.getGroupConfig(groupId)(useChatGroupStore.getState());
     const agents = sessionSelectors.currentGroupAgents(useSessionStore.getState());
 
     // Sort decisions by member order if response order is sequential
@@ -716,7 +723,8 @@ export const chatAiGroupChat: StateCreator<
 
     internal_cancelSupervisorDecision(groupId);
 
-    const groupConfig = chatGroupSelectors.currentGroupConfig(useChatGroupStore.getState());
+    // Use per-group config for debounce calculation
+    const groupConfig = chatGroupSelectors.getGroupConfig(groupId)(useChatGroupStore.getState());
     const responseSpeed = groupConfig?.responseSpeed;
     const debounceThreshold = getDebounceThreshold(responseSpeed);
 

@@ -67,6 +67,7 @@ export class GroupChatSupervisor {
 
       const supervisorPrompt = groupChatPrompts.buildSupervisorPrompt({
         allowDM,
+        scene: context.scene,
         availableAgents: availableAgents
           .filter((agent) => agent.id)
           .map((agent) => ({ id: agent.id!, title: agent.title })),

@@ -74,6 +74,7 @@ ${historyTag}
 
 export interface SupervisorPromptParams {
   allowDM?: boolean;
+  scene?: 'casual' | 'productive';
   availableAgents: Array<{ id: string; title?: string | null }>;
   conversationHistory: string;
   systemPrompt?: string;
@@ -88,6 +89,7 @@ const buildTodoListTag = (todoList?: SupervisorTodoItem[]): string => {
 
 export const buildSupervisorPrompt = ({
   allowDM = true,
+  scene = 'productive',
   availableAgents,
   conversationHistory,
   todoList,
@@ -112,11 +114,38 @@ export const buildSupervisorPrompt = ({
     .map((member) => `  <member id="${member.id}" name="${member.name}" />`)
     .join('\n');
 
-  const todoListTag = buildTodoListTag(todoList);
+  const todoListTag = scene === 'productive' ? buildTodoListTag(todoList) : '';
 
-  // Build rules and examples based on allowDM setting
-  const dmRules = `- Direct messages are allowed. When an agent should DM someone, set "target" to the recipient agent id or "user".
-- If no "target" is provided, the message will be sent to the whole group. Only use DM whent the message MUST be private.`;
+  // Build tool list text based on scene and allowDM
+  const toolLines: string[] = [
+    // trigger_agent (public)
+    '  - "trigger_agent": ask an agent to speak publicly to the group. Parameter must be {"id": "agentId"} with optional "instruction"',
+    // trigger_agent_dm (DM)
+    ...(
+      allowDM
+        ? [
+            '  - "trigger_agent_dm": ask an agent to send a private DM. Parameter must be {"id": "agentId", "target": "recipientId|user"} with optional "instruction"',
+          ]
+        : []
+    ),
+    // TODO tools only in productive scene
+    ...(
+      scene === 'productive'
+        ? [
+            '  - "create_todo": add a new todo. Parameter can be a string or an object like {"content": "..."}. Always create actionable, brief todos.',
+            '  - "finish_todo": mark todos as completed. Use {"index": 0} for a specific position.',
+          ]
+        : []
+    ),
+  ];
+
+  const availableToolsText = toolLines.join('\n');
+
+  // Build rules and examples for DM usage
+  const dmRules = allowDM
+    ? `- To send a private message, use "trigger_agent_dm" and set "target" to the recipient agent id or "user".
+- Use public messages by default; choose DM only when the message MUST be private.`
+    : '';
 
   const prompt = `
 You are a conversation supervisor for a group chat with multiple AI agents. Your role is to decide which agents should respond next based on the conversation context. Here's the group detail:
@@ -139,9 +168,7 @@ RULES:
 
 - You MUST respond with a JSON array. Each item represents invoking one of the available tools below.
 - Available tools:
-  - "create_todo": add a new todo. Parameter can be a string or an object like {"content": "..."}. Always create actionable, brief todos.
-  - "finish_todo": mark todos as completed. Use true to finish the next unfinished item, {"index": 0} for a specific position.
-  - "trigger_agent": ask an agent to speak. Parameter must be {"id": "agentId"} with optional "instruction"${allowDM ? ' and optional "target" for DM.' : '.'}
+${availableToolsText}
 - Execute tools in the order they should happen. Return [] when no further action is needed.
 - Stop the conversation by returning [] (an empty array).
 
@@ -150,14 +177,18 @@ WHEN ASKING AGENTS TO SPEAK:
 - Only reference agents from the member list. Never invent new IDs.
 - Provide concise English instructions when guiding agents via "instruction".
 - Be concise and to the point. Each instruction should no longer than 10 words. Always use English.
-${allowDM ? dmRules : ''}
+${dmRules}
 
-WHEN GENERATING TODOS:
+${
+  scene === 'productive'
+    ? `WHEN GENERATING TODOS:
 
 - Break down the main objective into logical, sequential todos
 - Be concise and to the point. Each todo should no longer than 10 words. Do not create more than 5 todos.
 - Match user's message language.
-- Keep todo items synchronized with the context. Finish or create todos as progress changes.
+- Keep todo items synchronized with the context. Finish or create todos as progress changes.`
+    : ''
+}
 
 Now share your decision.
 `;

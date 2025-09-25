@@ -6,6 +6,8 @@ import { useTranslation } from 'react-i18next';
 import { Center, Flexbox } from 'react-layout-kit';
 
 import { SupervisorTodoItem } from '@/store/chat/slices/message/supervisor';
+import { sessionSelectors } from '@/store/session/selectors';
+import { useSessionStore } from '@/store/session';
 
 const useStyles = createStyles(({ css, token }) => ({
   collapse: css`
@@ -42,6 +44,13 @@ const TodoList = memo<TodoListProps>(({ data }) => {
   const { styles } = useStyles();
 
   const { todos } = data;
+  const agents = useSessionStore(sessionSelectors.currentGroupAgents);
+
+  const resolveAssigneeName = (assignee?: string) => {
+    if (!assignee) return undefined;
+    const agent = agents?.find((a) => a.id === assignee);
+    return agent?.title || assignee;
+  };
   const completedCount = todos.filter((todo) => todo.finished).length;
   const totalCount = todos.length;
 
@@ -101,6 +110,17 @@ const TodoList = memo<TodoListProps>(({ data }) => {
             >
               {todo.content}
             </span>
+            {resolveAssigneeName(todo.assignee) && (
+              <span
+                style={{
+                  color: theme.colorTextTertiary,
+                  fontSize: theme.fontSizeSM,
+                  marginLeft: 6,
+                }}
+              >
+                @{resolveAssigneeName(todo.assignee)}
+              </span>
+            )}
           </Flexbox>
         ))}
       </Flexbox>

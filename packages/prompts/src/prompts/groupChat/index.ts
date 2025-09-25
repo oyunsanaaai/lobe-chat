@@ -8,6 +8,7 @@ export interface GroupMemberInfo {
 export interface SupervisorTodoItem {
   content: string;
   finished: boolean;
+  assignee?: string;
 }
 
 const buildGroupMembersTag = (members: GroupMemberInfo[]): string => {
@@ -132,7 +133,7 @@ export const buildSupervisorPrompt = ({
     ...(
       scene === 'productive'
         ? [
-            '  - "create_todo": add a new todo. Parameter can be a string or an object like {"content": "..."}. Always create actionable, brief todos.',
+            '  - "create_todo": add a new todo. Parameter can be a string or an object like {"content": "...", "assignee": "agentId"}. Only set "assignee" when a specific agent should own the task; otherwise omit it. Always create actionable, brief todos.',
             '  - "finish_todo": mark todos as completed. Use {"index": 0} for a specific position.',
           ]
         : []

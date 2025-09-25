@@ -110,7 +110,8 @@ const GroupMember = memo<GroupMemberProps>(
 
     const handleTriggerSupervisor = () => {
       if (!sessionId) return;
-      triggerSupervisorDecision(sessionId, true); // true = manual trigger, bypasses maxResponseInRow
+      // Manual trigger: topicId stays current (undefined), flag manual=true
+      triggerSupervisorDecision(sessionId, undefined, true);
     };
 
     return (

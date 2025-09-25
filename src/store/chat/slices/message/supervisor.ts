@@ -14,6 +14,8 @@ export interface SupervisorDecision {
 export type SupervisorDecisionList = SupervisorDecision[]; // Empty array = stop conversation
 
 export interface SupervisorTodoItem {
+  // optional assigned owner (agent id or name)
+  assignee?: string;
   content: string;
   finished: boolean;
 }
@@ -159,12 +161,16 @@ export class GroupChatSupervisor {
       additionalProperties: false,
       description: 'Create a new todo item',
       properties: {
+        assignee: {
+          description: 'Who will do the todo. Can be agent id or empty.',
+          type: 'string',
+        },
         content: {
           description: 'The todo content or description.',
           type: 'string',
         },
       },
-      required: ['content'],
+      required: ['content', 'assignee'],
       type: 'object',
     } as const;
 
@@ -430,7 +436,7 @@ export class GroupChatSupervisor {
       return parameter.reduce((acc, item) => this.applyCreateTodo(targetTodos, item) || acc, false);
     }
 
-    const content = this.extractTodoContent(parameter);
+    const { content, assignee } = this.extractTodoData(parameter);
     if (!content) return false;
 
     const exists = targetTodos.some(
@@ -439,17 +445,21 @@ export class GroupChatSupervisor {
 
     if (exists) return false;
 
-    targetTodos.push({ content, finished: false });
+    const newTodo: SupervisorTodoItem = { content, finished: false };
+    if (assignee && typeof assignee === 'string' && assignee.trim()) {
+      newTodo.assignee = assignee.trim();
+    }
+    targetTodos.push(newTodo);
     return true;
   }
 
-  private extractTodoContent(parameter: unknown): string | null {
+  private extractTodoData(parameter: unknown): { assignee?: string, content: string | null; } {
     if (typeof parameter === 'string') {
       const trimmed = parameter.trim();
-      return trimmed ? trimmed : null;
+      return { content: trimmed ? trimmed : null };
     }
 
-    if (!parameter || typeof parameter !== 'object') return null;
+    if (!parameter || typeof parameter !== 'object') return { content: null };
 
     const payload = parameter as Record<string, unknown>;
 
@@ -466,11 +476,17 @@ export class GroupChatSupervisor {
 
     for (const candidate of candidates) {
       if (typeof candidate === 'string' && candidate.trim()) {
-        return candidate.trim();
+        return { assignee: this.extractAssignee(payload), content: candidate.trim() };
       }
     }
 
-    return null;
+    return { content: null };
+  }
+
+  private extractAssignee(payload: Record<string, unknown>): string | undefined {
+    const a = payload.assignee;
+    if (typeof a === 'string' && a.trim()) return a.trim();
+    return undefined;
   }
 
   private applyFinishTodo(targetTodos: SupervisorTodoItem[], parameter: unknown): boolean {
@@ -637,6 +653,10 @@ export class GroupChatSupervisor {
             typeof (item as any).finished === 'boolean',
         )
         .map((item) => ({
+          assignee:
+            typeof (item as any).assignee === 'string' && (item as any).assignee.trim()
+              ? ((item as any).assignee as string).trim()
+              : undefined,
           content: (item as SupervisorTodoItem).content,
           finished: (item as SupervisorTodoItem).finished,
         }));

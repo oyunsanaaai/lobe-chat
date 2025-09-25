@@ -113,9 +113,12 @@ const useStyles = createStyles(({ css, token }) => ({
     color: ${token.colorTextSecondary};
   `,
   hostCard: css`
+    margin-block-start: ${token.paddingSM}px;
+    margin-inline: ${token.paddingSM}px;
     padding: ${token.padding}px;
     border: 1px solid ${token.colorBorderSecondary};
     border-radius: ${token.borderRadiusLG}px;
+
     background: ${token.colorFillTertiary};
   `,
   leftColumn: css`
@@ -124,8 +127,7 @@ const useStyles = createStyles(({ css, token }) => ({
     overflow-y: auto;
     flex: 1;
 
-    padding-block: ${token.paddingSM}px 0;
-    padding-inline: ${token.paddingSM}px;
+    padding: 0;
     border-inline-end: 1px solid ${token.colorBorderSecondary};
   `,
   listHeader: css`
@@ -160,7 +162,7 @@ const useStyles = createStyles(({ css, token }) => ({
     flex: 1;
     flex-direction: column;
 
-    padding: ${token.paddingSM}px;
+    padding: 0;
   `,
   title: css`
     font-size: 14px;
@@ -527,10 +529,11 @@ const ChatGroupWizard = memo<ChatGroupWizardProps>(
               allowClear
               onChange={handleSearchChange}
               placeholder={t('memberSelection.searchAgents')}
+              style={{ margin: `${theme.paddingSM}px ${theme.paddingSM}px 0 ${theme.paddingSM}px` }}
               value={searchTerm}
               variant="filled"
             />
-            <Flexbox flex={1} style={{ overflowY: 'auto' }}>
+            <Flexbox flex={1} style={{ overflowY: 'auto', padding: `0 ${theme.paddingSM}px` }}>
               <Collapse
                 accordion
                 activeKey={activePanel}
@@ -647,61 +650,63 @@ const ChatGroupWizard = memo<ChatGroupWizardProps>(
                 </Flexbox>
               </Flexbox>
 
-              {selectedTemplate ? (
-                templateMemberItems.length > 0 ? (
-                  <List
-                    items={templateMemberItems.map((member) => ({
-                      actions: (
-                        <Switch
-                          checked={!member.isRemoved}
-                          onChange={(checked) =>
-                            handleToggleMember(selectedTemplate, member.title, checked)
-                          }
-                          size="small"
-                        />
-                      ),
-                      avatar: (
-                        <Avatar
-                          avatar={member.avatar}
-                          background={member.backgroundColor}
-                          shape="circle"
-                          size={40}
-                        />
-                      ),
-                      description: member.systemRole ? (
-                        <Tooltip title={member.systemRole}>
-                          <Text
-                            className={memberDescriptionClass}
-                            ellipsis={{ rows: 1 }}
-                            type={member.isRemoved ? 'secondary' : undefined}
-                          >
-                            {member.systemRole}
+              <Flexbox style={{ padding: `0 ${theme.paddingSM}px` }}>
+                {selectedTemplate ? (
+                  templateMemberItems.length > 0 ? (
+                    <List
+                      items={templateMemberItems.map((member) => ({
+                        actions: (
+                          <Switch
+                            checked={!member.isRemoved}
+                            onChange={(checked) =>
+                              handleToggleMember(selectedTemplate, member.title, checked)
+                            }
+                            size="small"
+                          />
+                        ),
+                        avatar: (
+                          <Avatar
+                            avatar={member.avatar}
+                            background={member.backgroundColor}
+                            shape="circle"
+                            size={40}
+                          />
+                        ),
+                        description: member.systemRole ? (
+                          <Tooltip title={member.systemRole}>
+                            <Text
+                              className={memberDescriptionClass}
+                              ellipsis={{ rows: 1 }}
+                              type={member.isRemoved ? 'secondary' : undefined}
+                            >
+                              {member.systemRole}
+                            </Text>
+                          </Tooltip>
+                        ) : null,
+                        key: member.key,
+                        showAction: true,
+                        title: (
+                          <Text type={member.isRemoved ? 'secondary' : undefined}>
+                            {member.title}
                           </Text>
-                        </Tooltip>
-                      ) : null,
-                      key: member.key,
-                      showAction: true,
-                      title: (
-                        <Text type={member.isRemoved ? 'secondary' : undefined}>
-                          {member.title}
-                        </Text>
-                      ),
-                    }))}
-                  />
+                        ),
+                      }))}
+                    />
+                  ) : (
+                    <Empty
+                      description={t('groupWizard.noTemplateMembers')}
+                      image={Empty.PRESENTED_IMAGE_SIMPLE}
+                    />
+                  )
+                ) : selectedAgentListItems.length > 0 ? (
+                  <List items={selectedAgentListItems} />
                 ) : (
                   <Empty
-                    description={t('groupWizard.noTemplateMembers')}
+                    description={t('memberSelection.noSelectedAgents')}
                     image={Empty.PRESENTED_IMAGE_SIMPLE}
                   />
-                )
-              ) : selectedAgentListItems.length > 0 ? (
-                <List items={selectedAgentListItems} />
-              ) : (
-                <Empty
-                  description={t('memberSelection.noSelectedAgents')}
-                  image={Empty.PRESENTED_IMAGE_SIMPLE}
-                />
-              )}
+                )}
+              </Flexbox>
             </Flexbox>
           </Flexbox>
         </Flexbox>

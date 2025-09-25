@@ -212,8 +212,7 @@ export default {
             avatar: '📊',
             backgroundColor: '#E8F8F5',
             plugins: ['steam'],
-            systemRole:
-              '你是数据分析师，擅长处理和解释数据，通过图表和统计分析揭示数据背后的规律和趋势。',
+            systemRole: '你擅长处理和解释数据，通过图表和统计分析揭示数据背后的规律和趋势。',
             title: '数据分析师',
           },
           {

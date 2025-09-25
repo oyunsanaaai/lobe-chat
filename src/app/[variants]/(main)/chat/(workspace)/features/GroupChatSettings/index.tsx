@@ -61,7 +61,7 @@ const GroupChatSettings = memo(() => {
               height: 'calc(100vh - 28px)',
             }}
           >
-            <PanelTitle desc={t('header.groupDesc')} title={t('header.group')} />
+            <PanelTitle desc={meta?.title} title={t('header.group')} />
             <Flexbox flex={1} width={'100%'}>
               <GroupCategory setTab={setTab} tab={tab} />
             </Flexbox>

@@ -183,6 +183,7 @@ export interface ChatGroupWizardProps {
     templateId: string,
     hostConfig?: { model?: string; provider?: string },
     enableSupervisor?: boolean,
+    selectedMemberTitles?: string[],
   ) => void | Promise<void>;
   open: boolean;
 }
@@ -437,12 +438,31 @@ const ChatGroupWizard = memo<ChatGroupWizardProps>(
       const hostConfig = isHostRemoved ? undefined : normalizedHostModelConfig;
 
       try {
-        await onCreateFromTemplate(selectedTemplate, hostConfig, !isHostRemoved);
+        // collect selected member titles (not removed)
+        const template = groupTemplates.find((t) => t.id === selectedTemplate);
+        const removedForTemplate = new Set(removedMembers[selectedTemplate] || []);
+        const selectedMemberTitles = (template?.members || [])
+          .filter((m) => !removedForTemplate.has(m.title))
+          .map((m) => m.title);
+
+        await onCreateFromTemplate(
+          selectedTemplate,
+          hostConfig,
+          !isHostRemoved,
+          selectedMemberTitles,
+        );
         handleReset();
       } catch (error) {
         console.error('Failed to create group from template:', error);
       }
-    }, [selectedTemplate, onCreateFromTemplate, normalizedHostModelConfig, isHostRemoved]);
+    }, [
+      selectedTemplate,
+      onCreateFromTemplate,
+      normalizedHostModelConfig,
+      isHostRemoved,
+      groupTemplates,
+      removedMembers,
+    ]);
 
     const handleCustomConfirm = useCallback(async () => {
       if (selectedAgents.length === 0) return;

@@ -6,6 +6,7 @@ export interface GroupTemplate {
   members: Array<{
     avatar: string;
     backgroundColor?: string;
+    plugins?: string[];
     systemRole: string;
     title: string;
   }>;

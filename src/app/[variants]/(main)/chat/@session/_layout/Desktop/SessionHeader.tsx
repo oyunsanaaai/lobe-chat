@@ -58,6 +58,7 @@ const Header = memo(() => {
     templateId: string,
     hostConfig?: { model?: string; provider?: string },
     enableSupervisor?: boolean,
+    selectedMemberTitles?: string[],
   ) => {
     // Don't close the modal immediately, keep it open during the process
     setIsCreatingGroup(true);
@@ -67,13 +68,20 @@ const Header = memo(() => {
         throw new Error(`Template ${templateId} not found`);
       }
 
-      // Create assistants for each member and get their agent IDs
+      // Determine which members to create based on selection
+      const membersToCreate =
+        typeof selectedMemberTitles === 'undefined'
+          ? template.members
+          : template.members.filter((m) => selectedMemberTitles.includes(m.title));
+
+      // Create assistants for each selected member and get their agent IDs
       const memberAgentIds: string[] = [];
-      for (const member of template.members) {
+      for (const member of membersToCreate) {
         const sessionId = await createSession(
           {
             config: {
               systemRole: member.systemRole,
+              plugins: member.plugins,
             },
             meta: {
               avatar: member.avatar,

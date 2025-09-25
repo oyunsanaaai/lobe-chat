@@ -24,7 +24,11 @@ export interface SupervisorDecisionResult {
   todos: SupervisorTodoItem[];
 }
 
-export type SupervisorToolName = 'create_todo' | 'finish_todo' | 'trigger_agent' | 'trigger_agent_dm';
+export type SupervisorToolName =
+  | 'create_todo'
+  | 'finish_todo'
+  | 'trigger_agent'
+  | 'trigger_agent_dm';
 
 export interface SupervisorToolCall {
   parameter?: unknown;
@@ -67,11 +71,11 @@ export class GroupChatSupervisor {
 
       const supervisorPrompt = groupChatPrompts.buildSupervisorPrompt({
         allowDM,
-        scene: context.scene,
         availableAgents: availableAgents
           .filter((agent) => agent.id)
           .map((agent) => ({ id: agent.id!, title: agent.title })),
         conversationHistory,
+        scene: context.scene,
         systemPrompt,
         todoList,
         userName,
@@ -129,11 +133,11 @@ export class GroupChatSupervisor {
           description: 'The agent id to trigger.',
           type: 'string',
         },
-        target: {
-          description: 'The target agent id. Only used when need DM.',
+        instruction: {
           type: 'string',
         },
-        instruction: {
+        target: {
+          description: 'The target agent id. Only used when need DM.',
           type: 'string',
         },
       },
@@ -143,7 +147,9 @@ export class GroupChatSupervisor {
 
     const enableTodo = context.scene === 'productive';
     const toolNameEnumBase: SupervisorToolName[] = ['trigger_agent'];
-    const withDM = context.allowDM ? (['trigger_agent_dm'] as SupervisorToolName[]) : ([] as SupervisorToolName[]);
+    const withDM = context.allowDM
+      ? (['trigger_agent_dm'] as SupervisorToolName[])
+      : ([] as SupervisorToolName[]);
     const withTodo = enableTodo
       ? (['create_todo', 'finish_todo'] as SupervisorToolName[])
       : ([] as SupervisorToolName[]);
@@ -226,7 +232,6 @@ export class GroupChatSupervisor {
           ],
           schema: responseFormat,
           ...supervisorConfig,
-          provider: 'openai',
         },
         context.abortController || new AbortController(),
       );
@@ -369,7 +374,7 @@ export class GroupChatSupervisor {
     }
 
     const parameter = raw.parameter;
-    
+
     return {
       parameter,
       tool_name: toolName as SupervisorToolName,
@@ -447,12 +452,12 @@ export class GroupChatSupervisor {
     if (!parameter || typeof parameter !== 'object') return null;
 
     const payload = parameter as Record<string, unknown>;
-    
+
     // Since we constrained the schema to require 'content', prioritize it
     // But keep fallbacks for backward compatibility with existing data
     const candidates: unknown[] = [
-      payload.content,  // Primary field from schema
-      payload.id,       // Fallback for current format
+      payload.content, // Primary field from schema
+      payload.id, // Fallback for current format
       payload.title,
       payload.task,
       payload.text,
@@ -472,7 +477,7 @@ export class GroupChatSupervisor {
     if (!parameter || typeof parameter !== 'object') return false;
 
     const payload = parameter as Record<string, unknown>;
-    
+
     // Since we constrained the schema to require 'index', we expect it to be present
     if (typeof payload.index === 'number') {
       return this.finishTodoByIndex(targetTodos, payload.index);
@@ -481,7 +486,6 @@ export class GroupChatSupervisor {
     return false;
   }
 
-
   private finishTodoByIndex(targetTodos: SupervisorTodoItem[], index: number): boolean {
     if (!Number.isInteger(index)) return false;
     if (index < 0 || index >= targetTodos.length) return false;
@@ -489,7 +493,6 @@ export class GroupChatSupervisor {
     targetTodos[index].finished = true;
     return true;
   }
-
 
   private buildDecisionFromTool(
     parameter: unknown,

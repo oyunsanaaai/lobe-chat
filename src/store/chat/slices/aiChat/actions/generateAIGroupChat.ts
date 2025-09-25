@@ -171,7 +171,11 @@ export interface ChatGroupChatAction {
   /**
    * Triggers supervisor decision for group chat
    */
-  internal_triggerSupervisorDecision: (groupId: string, isManualTrigger?: boolean) => Promise<void>;
+  internal_triggerSupervisorDecision: (
+    groupId: string,
+    topicId?: string | null,
+    isManualTrigger?: boolean,
+  ) => Promise<void>;
 
   /**
    * Triggers supervisor decision with debounce logic (dynamic threshold based on group responseSpeed setting)
@@ -314,14 +318,20 @@ export const chatAiGroupChat: StateCreator<
 
   // ========= ↓ Group Chat Internal Methods ↓ ========== //
 
-  internal_triggerSupervisorDecision: async (groupId: string, isManualTrigger: boolean = false) => {
+  internal_triggerSupervisorDecision: async (
+    groupId: string,
+    topicId?: string | null,
+    isManualTrigger: boolean = false,
+  ) => {
     const {
       messagesMap,
       internal_toggleSupervisorLoading,
       internal_createMessage,
       supervisorTodos,
-      activeTopicId,
     } = get();
+
+    // Capture topicId at invocation time to avoid leaking state after topic switches
+    const currentTopicId = typeof topicId === 'undefined' ? get().activeTopicId : topicId;
 
     const { internal_updateSupervisorTodos } = useChatGroupStore.getState();
 
@@ -337,7 +347,7 @@ export const chatAiGroupChat: StateCreator<
         groupId,
         role: 'supervisor',
         sessionId,
-        topicId: activeTopicId ?? undefined,
+        topicId: currentTopicId ?? undefined,
       };
 
       console.log('Creating supervisor todo message:', supervisorMessage);
@@ -345,7 +355,7 @@ export const chatAiGroupChat: StateCreator<
       await internal_createMessage(supervisorMessage);
     };
 
-    const messages = messagesMap[messageMapKey(groupId, activeTopicId)] || [];
+    const messages = messagesMap[messageMapKey(groupId, currentTopicId)] || [];
     const agents = sessionSelectors.currentGroupAgents(useSessionStore.getState());
 
     if (messages.length === 0) return;
@@ -385,7 +395,7 @@ export const chatAiGroupChat: StateCreator<
     const realUserName = userProfileSelectors.nickName(userStoreState) || 'User';
 
     try {
-      const todoKey = messageMapKey(groupId, activeTopicId);
+      const todoKey = messageMapKey(groupId, currentTopicId);
 
       const context: SupervisorContext = {
         allowDM: groupConfig.allowDM,
@@ -405,7 +415,7 @@ export const chatAiGroupChat: StateCreator<
 
       const { decisions, todos, todoUpdated } = await supervisor.makeDecision(context);
 
-      internal_updateSupervisorTodos(groupId, activeTopicId, todos);
+      internal_updateSupervisorTodos(groupId, currentTopicId, todos);
 
       if (todoUpdated) {
         await createSupervisorTodoMessage(todos);
@@ -731,6 +741,9 @@ export const chatAiGroupChat: StateCreator<
       `Using debounce threshold: ${debounceThreshold}ms for responseSpeed: ${responseSpeed}`,
     );
 
+    // Capture topicId at schedule time to decouple from future topic switches
+    const scheduledTopicId = get().activeTopicId;
+
     // Set a new timer with dynamic debounce based on group settings
     const timerId = setTimeout(async () => {
       console.log(`Debounced supervisor decision triggered for group ${groupId}`);
@@ -745,7 +758,7 @@ export const chatAiGroupChat: StateCreator<
       );
 
       try {
-        await internal_triggerSupervisorDecision(groupId, false); // false = automatic trigger
+        await internal_triggerSupervisorDecision(groupId, scheduledTopicId, false); // false = automatic trigger
       } catch (error) {
         console.error(`Failed to execute supervisor decision for group ${groupId}:`, error);
       }

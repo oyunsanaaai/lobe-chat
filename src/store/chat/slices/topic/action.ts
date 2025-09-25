@@ -5,6 +5,7 @@ import { chainSummaryTitle } from '@lobechat/prompts';
 import { TraceNameMap } from '@lobechat/types';
 import isEqual from 'fast-deep-equal';
 import { t } from 'i18next';
+import { produce } from 'immer';
 import useSWR, { SWRResponse, mutate } from 'swr';
 import { StateCreator } from 'zustand/vanilla';
 
@@ -16,6 +17,10 @@ import { messageService } from '@/services/message';
 import { topicService } from '@/services/topic';
 import { CreateTopicParams } from '@/services/topic/type';
 import type { ChatStore } from '@/store/chat';
+import type { ChatStoreState } from '@/store/chat/initialState';
+import { messageMapKey } from '@/store/chat/utils/messageMapKey';
+import { useSessionStore } from '@/store/session';
+import { sessionSelectors } from '@/store/session/selectors';
 import { globalHelpers } from '@/store/global/helpers';
 import { useUserStore } from '@/store/user';
 import { systemAgentSelectors } from '@/store/user/selectors';
@@ -124,6 +129,26 @@ export const chatTopic: StateCreator<
     // 2. auto summary topic Title
     // we don't need to wait for summary, just let it run async
     summaryTopicTitle(topicId, messages);
+
+    // Clear supervisor todos for temporary topic in current container after saving
+    try {
+      const { activeId, activeSessionType } = get();
+      let isGroupSession = activeSessionType === 'group';
+      if (activeSessionType === undefined) {
+        const sessionStore = useSessionStore.getState();
+        isGroupSession = sessionSelectors.isCurrentSessionGroupSession(sessionStore);
+      }
+
+      if (isGroupSession) {
+        set(
+          produce((state: ChatStoreState) => {
+            state.supervisorTodos[messageMapKey(groupId || activeId, null)] = [];
+          }),
+          false,
+          n('resetSupervisorTodosOnSaveToTopic', { groupId: groupId || activeId }),
+        );
+      }
+    } catch {}
 
     return topicId;
   },
@@ -255,6 +280,33 @@ export const chatTopic: StateCreator<
       false,
       n('toggleTopic'),
     );
+
+    // Reset supervisor todos when switching topics in group chats
+    try {
+      const { activeId, activeSessionType, internal_cancelSupervisorDecision } = get();
+      // Determine group session robustly (cached flag or from session store)
+      let isGroupSession = activeSessionType === 'group';
+      if (activeSessionType === undefined) {
+        const sessionStore = useSessionStore.getState();
+        isGroupSession = sessionSelectors.isCurrentSessionGroupSession(sessionStore);
+      }
+
+      if (isGroupSession) {
+        const newKey = messageMapKey(activeId, id ?? null);
+        set(
+          produce((state: ChatStoreState) => {
+            state.supervisorTodos[newKey] = [];
+          }),
+          false,
+          n('resetSupervisorTodosOnTopicSwitch', { groupId: activeId, topicId: id ?? null }),
+        );
+
+        // Also cancel any pending supervisor decisions tied to this group
+        internal_cancelSupervisorDecision?.(activeId);
+      }
+    } catch (e) {
+      // no-op: resetting todos should not block topic switching
+    }
 
     if (skipRefreshMessage) return;
     await get().refreshMessages();

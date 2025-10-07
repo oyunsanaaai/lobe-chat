@@ -1,28 +1,21 @@
 'use client';
 
+import { LOADING_FLAT } from '@lobechat/const';
 import { ChatMessage } from '@lobechat/types';
 import { useResponsive } from 'antd-style';
 import { ReactNode, memo, useCallback, useMemo } from 'react';
 import { Flexbox } from 'react-layout-kit';
 
 import { HtmlPreviewAction } from '@/components/HtmlPreview';
-import { LOADING_FLAT } from '@/const/message';
 import Avatar from '@/features/ChatItem/components/Avatar';
 import BorderSpacing from '@/features/ChatItem/components/BorderSpacing';
 import ErrorContent from '@/features/ChatItem/components/ErrorContent';
 import MessageContent from '@/features/ChatItem/components/MessageContent';
 import Title from '@/features/ChatItem/components/Title';
 import { useStyles } from '@/features/ChatItem/style';
-import ErrorMessageExtra, { useErrorContent } from '@/features/Conversation/Error';
-import { markdownElements } from '@/features/Conversation/MarkdownElements';
-import { AssistantActionsBar } from '@/features/Conversation/Messages/Assistant/Actions';
-import { AssistantMessageExtra } from '@/features/Conversation/Messages/Assistant/Extra';
-import { AssistantMessageContent } from '@/features/Conversation/Messages/Assistant/MessageContent';
-import { useDoubleClickEdit } from '@/features/Conversation/hooks/useDoubleClickEdit';
-import { normalizeThinkTags, processWithArtifact } from '@/features/Conversation/utils';
 import { useOpenChatSettings } from '@/hooks/useInterceptingRoutes';
 import { useAgentStore } from '@/store/agent';
-import { agentChatConfigSelectors } from '@/store/agent/slices/chat';
+import { agentChatConfigSelectors } from '@/store/agent/selectors';
 import { useChatStore } from '@/store/chat';
 import { chatSelectors } from '@/store/chat/selectors';
 import { useGlobalStore } from '@/store/global';
@@ -30,6 +23,14 @@ import { useSessionStore } from '@/store/session';
 import { sessionSelectors } from '@/store/session/selectors';
 import { useUserStore } from '@/store/user';
 import { userGeneralSettingsSelectors } from '@/store/user/selectors';
+
+import ErrorMessageExtra, { useErrorContent } from '../../Error';
+import { markdownElements } from '../../MarkdownElements';
+import { useDoubleClickEdit } from '../../hooks/useDoubleClickEdit';
+import { normalizeThinkTags, processWithArtifact } from '../../utils/markdown';
+import { AssistantActionsBar } from './Actions';
+import { AssistantMessageExtra } from './Extra';
+import { AssistantMessageContent } from './MessageContent';
 
 const rehypePlugins = markdownElements.map((element) => element.rehypePlugin).filter(Boolean);
 const remarkPlugins = markdownElements.map((element) => element.remarkPlugin).filter(Boolean);

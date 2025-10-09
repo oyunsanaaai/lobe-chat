@@ -192,7 +192,7 @@ const AssistantMessage = memo<AssistantMessageProps>((props) => {
         size={mobile ? MOBILE_AVATAR_SIZE : undefined}
         style={{ marginTop: 6 }}
       />
-      <Flexbox align={'flex-start'} className={styles.messageContainer}>
+      <Flexbox align={'flex-start'} className={styles.messageContainer} width={'100%'}>
         <Title avatar={avatar} placement={placement} showTitle={showTitle} time={createdAt} />
         <Flexbox
           align={'flex-start'}
@@ -200,6 +200,7 @@ const AssistantMessage = memo<AssistantMessageProps>((props) => {
           data-layout={'vertical'} // 添加数据属性以方便样式选择
           direction={'vertical'}
           gap={8}
+          width={'100%'}
         >
           <Flexbox width={'100%'}>
             {error && (message === LOADING_FLAT || !message) ? (

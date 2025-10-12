@@ -50,14 +50,12 @@ const Render = memo<RenderProps>(
         />
       );
 
-      const isDevTesting = process.env.NEXT_PUBLIC_TOOLS_CALLING_PLACEHOLDER === '1';
-
       // 如果是 LOADING_FLAT 则说明还在加载中
       // 而 standalone 模式的插件 content 应该始终是 LOADING_FLAT
       const inPlaceholder =
         toolMessage.content === LOADING_FLAT && toolMessage.plugin?.type !== 'standalone';
 
-      if (isDevTesting || inPlaceholder) return placeholder;
+      if (inPlaceholder) return placeholder;
 
       return (
         <Suspense fallback={placeholder}>

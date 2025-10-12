@@ -20,9 +20,13 @@ const useStyles = createStyles(({ css, token, cx }) => ({
     `,
   ),
   container: css`
+    justify-content: space-between;
+
+    height: 64px;
     padding: 8px;
     border: 1px solid ${token.colorBorderSecondary};
     border-radius: ${token.borderRadiusLG}px;
+
     transition: all 0.2s ${token.motionEaseInOut};
 
     &:hover {
@@ -115,7 +119,7 @@ const ReadFileView = memo<ReadFileViewProps>(
           onClick={handleToggleExpand}
         >
           <Flexbox align={'center'} flex={1} gap={0} horizontal style={{ overflow: 'hidden' }}>
-            <FileIcon fileName={filename} fileType={fileType} size={24} variant={'raw'} />
+            <FileIcon fileName={filename} fileType={fileType} size={16} variant={'raw'} />
             <Flexbox horizontal>
               <Text className={styles.fileName} ellipsis>
                 {filename}

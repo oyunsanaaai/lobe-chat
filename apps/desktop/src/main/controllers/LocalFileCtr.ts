@@ -445,10 +445,10 @@ export default class LocalFileCtr extends ControllerModule {
     }
 
     try {
-      // 确保目标目录存在
+      // 确保目标目录存在（使用异步以避免阻塞主线程）
       const dirname = path.dirname(filePath);
       logger.debug(`${logPrefix} Creating directory: ${dirname}`);
-      fs.mkdirSync(dirname, { recursive: true });
+      await fs.promises.mkdir(dirname, { recursive: true });
 
       // 写入文件内容
       logger.debug(`${logPrefix} Starting to write content to file`);

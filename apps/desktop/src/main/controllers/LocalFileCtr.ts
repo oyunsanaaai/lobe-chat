@@ -20,10 +20,9 @@ import {
 import { SYSTEM_FILES_TO_IGNORE, loadFile } from '@lobechat/file-loaders';
 import { shell } from 'electron';
 import fg from 'fast-glob';
-import * as fs from 'node:fs';
-import { rename as renamePromise } from 'node:fs/promises';
+import { Stats, constants } from 'node:fs';
+import { access, mkdir, readFile, readdir, rename, stat, writeFile } from 'node:fs/promises';
 import * as path from 'node:path';
-import { promisify } from 'node:util';
 
 import FileSearchService from '@/services/fileSearchSrv';
 import { FileResult, SearchOptions } from '@/types/fileSearch';
@@ -32,15 +31,8 @@ import { createLogger } from '@/utils/logger';
 
 import { ControllerModule, ipcClientEvent } from './index';
 
-// 创建日志记录器
+// Create logger
 const logger = createLogger('controllers:LocalFileCtr');
-
-const statPromise = promisify(fs.stat);
-const readdirPromise = promisify(fs.readdir);
-const renamePromiseFs = promisify(fs.rename);
-const accessPromise = promisify(fs.access);
-const writeFilePromise = promisify(fs.writeFile);
-const readFilePromise = promisify(fs.readFile);
 
 export default class LocalFileCtr extends ControllerModule {
   private get searchService() {
@@ -91,7 +83,7 @@ export default class LocalFileCtr extends ControllerModule {
     const results: LocalReadFileResult[] = [];
 
     for (const filePath of paths) {
-      // 初始化结果对象
+      // Initialize result object
       logger.debug('Reading single file:', { filePath });
       const result = await this.readFile({ path: filePath });
       results.push(result);
@@ -147,7 +139,7 @@ export default class LocalFileCtr extends ControllerModule {
       };
 
       try {
-        const stats = await statPromise(filePath);
+        const stats = await stat(filePath);
         if (stats.isDirectory()) {
           logger.warn('Attempted to read directory content:', { filePath });
           result.content = 'This is a directory and cannot be read as plain text.';
@@ -186,7 +178,7 @@ export default class LocalFileCtr extends ControllerModule {
 
     const results: FileResult[] = [];
     try {
-      const entries = await readdirPromise(dirPath);
+      const entries = await readdir(dirPath);
       logger.debug('Directory entries retrieved successfully:', {
         dirPath,
         entriesCount: entries.length,
@@ -201,7 +193,7 @@ export default class LocalFileCtr extends ControllerModule {
 
         const fullPath = path.join(dirPath, entry);
         try {
-          const stats = await statPromise(fullPath);
+          const stats = await stat(fullPath);
           const isDirectory = stats.isDirectory();
           results.push({
             createdTime: stats.birthtime,
@@ -249,7 +241,7 @@ export default class LocalFileCtr extends ControllerModule {
       return [];
     }
 
-    // 逐个处理移动请求
+    // Process each move request
     for (const item of items) {
       const { oldPath: sourcePath, newPath } = item;
       const logPrefix = `[Moving file ${sourcePath} -> ${newPath}]`;
@@ -261,7 +253,7 @@ export default class LocalFileCtr extends ControllerModule {
         success: false,
       };
 
-      // 基本验证
+      // Basic validation
       if (!sourcePath || !newPath) {
         logger.error(`${logPrefix} Parameter validation failed: source or target path is empty`);
         resultItem.error = 'Both oldPath and newPath are required for each item.';
@@ -270,9 +262,9 @@ export default class LocalFileCtr extends ControllerModule {
       }
 
       try {
-        // 检查源是否存在
+        // Check if source exists
         try {
-          await accessPromise(sourcePath, fs.constants.F_OK);
+          await access(sourcePath, constants.F_OK);
           logger.debug(`${logPrefix} Source file exists`);
         } catch (accessError: any) {
           if (accessError.code === 'ENOENT') {
@@ -286,28 +278,28 @@ export default class LocalFileCtr extends ControllerModule {
           }
         }
 
-        // 检查目标路径是否与源路径相同
+        // Check if target path is the same as source path
         if (path.normalize(sourcePath) === path.normalize(newPath)) {
           logger.info(`${logPrefix} Source and target paths are identical, skipping move`);
           resultItem.success = true;
-          resultItem.newPath = newPath; // 即使未移动，也报告目标路径
+          resultItem.newPath = newPath; // Report target path even if not moved
           results.push(resultItem);
           continue;
         }
 
-        // LBYL: 确保目标目录存在
+        // LBYL: Ensure target directory exists
         const targetDir = path.dirname(newPath);
         makeSureDirExist(targetDir);
         logger.debug(`${logPrefix} Ensured target directory exists: ${targetDir}`);
 
-        // 执行移动 (rename)
-        await renamePromiseFs(sourcePath, newPath);
+        // Execute move (rename)
+        await rename(sourcePath, newPath);
         resultItem.success = true;
         resultItem.newPath = newPath;
         logger.info(`${logPrefix} Move successful`);
       } catch (error) {
         logger.error(`${logPrefix} Move failed:`, error);
-        // 使用与 handleMoveFile 类似的错误处理逻辑
+        // Use similar error handling logic as handleMoveFile
         let errorMessage = (error as Error).message;
         if ((error as any).code === 'ENOENT')
           errorMessage = `Source path not found: ${sourcePath}.`;
@@ -323,7 +315,7 @@ export default class LocalFileCtr extends ControllerModule {
           errorMessage = `The target directory ${newPath} is not empty (relevant on some systems if target exists and is a directory).`;
         else if ((error as any).code === 'EEXIST')
           errorMessage = `An item already exists at the target path: ${newPath}.`;
-        // 保留来自访问检查或目录检查的更具体错误
+        // Keep more specific errors from access or directory checks
         else if (
           !errorMessage.startsWith('Source path not found') &&
           !errorMessage.startsWith('Permission denied accessing source path') &&
@@ -400,9 +392,9 @@ export default class LocalFileCtr extends ControllerModule {
       };
     }
 
-    // Perform the rename operation using fs.promises.rename directly
+    // Perform the rename operation using rename directly
     try {
-      await renamePromise(currentPath, newPath);
+      await rename(currentPath, newPath);
       logger.info(`${logPrefix} Rename successful: ${currentPath} -> ${newPath}`);
       // Optionally return the newPath if frontend needs it
       // return { success: true, newPath: newPath };
@@ -433,7 +425,7 @@ export default class LocalFileCtr extends ControllerModule {
     const logPrefix = `[Writing file ${filePath}]`;
     logger.debug(`${logPrefix} Starting to write file`, { contentLength: content?.length });
 
-    // 验证参数
+    // Validate parameters
     if (!filePath) {
       logger.error(`${logPrefix} Parameter validation failed: path is empty`);
       return { error: 'Path cannot be empty', success: false };
@@ -445,14 +437,14 @@ export default class LocalFileCtr extends ControllerModule {
     }
 
     try {
-      // 确保目标目录存在（使用异步以避免阻塞主线程）
+      // Ensure target directory exists (use async to avoid blocking main thread)
       const dirname = path.dirname(filePath);
       logger.debug(`${logPrefix} Creating directory: ${dirname}`);
-      await fs.promises.mkdir(dirname, { recursive: true });
+      await mkdir(dirname, { recursive: true });
 
-      // 写入文件内容
+      // Write file content
       logger.debug(`${logPrefix} Starting to write content to file`);
-      await writeFilePromise(filePath, content, 'utf8');
+      await writeFile(filePath, content, 'utf8');
       logger.info(`${logPrefix} File written successfully`, {
         path: filePath,
         size: content.length,
@@ -509,7 +501,7 @@ export default class LocalFileCtr extends ControllerModule {
 
       // Determine files to search
       let filesToSearch: string[] = [];
-      const stats = await statPromise(searchPath);
+      const stats = await stat(searchPath);
 
       if (stats.isFile()) {
         filesToSearch = [searchPath];
@@ -537,10 +529,10 @@ export default class LocalFileCtr extends ControllerModule {
 
       for (const filePath of filesToSearch) {
         try {
-          const fileStats = await statPromise(filePath);
+          const fileStats = await stat(filePath);
           if (!fileStats.isFile()) continue;
 
-          const content = await readFilePromise(filePath, 'utf8');
+          const content = await readFile(filePath, 'utf8');
           const lines = content.split('\n');
 
           switch (output_mode) {
@@ -625,7 +617,7 @@ export default class LocalFileCtr extends ControllerModule {
       });
 
       // Sort by modification time (most recent first)
-      const sortedFiles = (files as unknown as Array<{ path: string; stats: fs.Stats }>)
+      const sortedFiles = (files as unknown as Array<{ path: string; stats: Stats }>)
         .sort((a, b) => b.stats.mtime.getTime() - a.stats.mtime.getTime())
         .map((f) => f.path);
 
@@ -660,7 +652,7 @@ export default class LocalFileCtr extends ControllerModule {
 
     try {
       // Read file content
-      const content = await readFilePromise(filePath, 'utf8');
+      const content = await readFile(filePath, 'utf8');
 
       // Check if old_string exists
       if (!content.includes(old_string)) {
@@ -697,7 +689,7 @@ export default class LocalFileCtr extends ControllerModule {
       }
 
       // Write back to file
-      await writeFilePromise(filePath, newContent, 'utf8');
+      await writeFile(filePath, newContent, 'utf8');
 
       logger.info(`${logPrefix} File edited successfully`, { replacements });
       return {

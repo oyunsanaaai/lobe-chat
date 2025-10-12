@@ -58,27 +58,33 @@ export interface LocalRenameFileState {
 
 // Shell Command States
 export interface RunCommandState {
+  message: string;
   result: RunCommandResult;
 }
 
 export interface GetCommandOutputState {
+  message: string;
   result: GetCommandOutputResult;
 }
 
 export interface KillCommandState {
+  message: string;
   result: KillCommandResult;
 }
 
 // Search & Find States
 export interface GrepContentState {
+  message: string;
   result: GrepContentResult;
 }
 
 export interface GlobFilesState {
+  message: string;
   result: GlobFilesResult;
 }
 
 // Edit State
 export interface EditLocalFileState {
+  message: string;
   result: EditLocalFileResult;
 }

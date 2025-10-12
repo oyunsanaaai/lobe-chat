@@ -213,7 +213,7 @@ export const LocalSystemManifest: BuiltinToolManifest = {
           },
           description: {
             description:
-              'Clear description of what this command does (5-10 words, in active voice)',
+              'Clear description of what this command does (5-10 words, in active voice). Use the same language as the user input.',
             type: 'string',
           },
           run_in_background: {

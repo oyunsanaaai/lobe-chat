@@ -74,16 +74,14 @@ export const localSystemSlice: StateCreator<
   editLocalFile: async (id, params) => {
     return get().internal_triggerLocalFileToolCalling<EditLocalFileState>(id, async () => {
       const result = await localFileService.editLocalFile(params);
-      const state: EditLocalFileState = { result };
 
-      const content = {
-        message: result.success
-          ? `Successfully replaced ${result.replacements} occurrence(s) in ${params.file_path}`
-          : `Edit failed: ${result.error}`,
-        result,
-      };
+      const message = result.success
+        ? `Successfully replaced ${result.replacements} occurrence(s) in ${params.file_path}`
+        : `Edit failed: ${result.error}`;
 
-      return { content, state };
+      const state: EditLocalFileState = { message, result };
+
+      return { content: result, state };
     });
   },
 
@@ -180,30 +178,26 @@ export const localSystemSlice: StateCreator<
   grepContent: async (id, params) => {
     return get().internal_triggerLocalFileToolCalling<GrepContentState>(id, async () => {
       const result = await localFileService.grepContent(params);
-      const state: GrepContentState = { result };
 
-      const content = {
-        message: result.success
-          ? `Found ${result.total_matches} matches in ${result.matches.length} locations`
-          : 'Search failed',
-        result,
-      };
+      const message = result.success
+        ? `Found ${result.total_matches} matches in ${result.matches.length} locations`
+        : 'Search failed';
 
-      return { content, state };
+      const state: GrepContentState = { message, result };
+
+      return { content: result, state };
     });
   },
 
   globLocalFiles: async (id, params) => {
     return get().internal_triggerLocalFileToolCalling<GlobFilesState>(id, async () => {
       const result = await localFileService.globFiles(params);
-      const state: GlobFilesState = { result };
 
-      const content = {
-        message: result.success ? `Found ${result.total_files} files` : 'Glob search failed',
-        result,
-      };
+      const message = result.success ? `Found ${result.total_files} files` : 'Glob search failed';
 
-      return { content, state };
+      const state: GlobFilesState = { message, result };
+
+      return { content: result, state };
     });
   },
 
@@ -251,60 +245,48 @@ export const localSystemSlice: StateCreator<
   runCommand: async (id, params) => {
     return get().internal_triggerLocalFileToolCalling<RunCommandState>(id, async () => {
       const result = await localFileService.runCommand(params);
-      const state: RunCommandState = { result };
 
-      let content: { message: string; result: typeof result };
+      let message: string;
 
       if (result.success) {
         if (result.shell_id) {
-          content = {
-            message: `Command started in background with shell_id: ${result.shell_id}`,
-            result,
-          };
+          message = `Command started in background with shell_id: ${result.shell_id}`;
         } else {
-          content = {
-            message: `Command completed successfully. Exit code: ${result.exit_code}`,
-            result,
-          };
+          message = `Command completed successfully. Exit code: ${result.exit_code}`;
         }
       } else {
-        content = {
-          message: `Command failed: ${result.error}`,
-          result,
-        };
+        message = `Command failed: ${result.error}`;
       }
 
-      return { content, state };
+      const state: RunCommandState = { message, result };
+
+      return { content: result, state };
     });
   },
   killCommand: async (id, params) => {
     return get().internal_triggerLocalFileToolCalling<KillCommandState>(id, async () => {
       const result = await localFileService.killCommand(params);
-      const state: KillCommandState = { result };
 
-      const content = {
-        message: result.success
-          ? `Successfully killed shell: ${params.shell_id}`
-          : `Failed to kill shell: ${result.error}`,
-        result,
-      };
+      const message = result.success
+        ? `Successfully killed shell: ${params.shell_id}`
+        : `Failed to kill shell: ${result.error}`;
 
-      return { content, state };
+      const state: KillCommandState = { message, result };
+
+      return { content: result, state };
     });
   },
   getCommandOutput: async (id, params) => {
     return get().internal_triggerLocalFileToolCalling<GetCommandOutputState>(id, async () => {
       const result = await localFileService.getCommandOutput(params);
-      const state: GetCommandOutputState = { result };
 
-      const content = {
-        message: result.success
-          ? `Output retrieved. Running: ${result.running}`
-          : `Failed: ${result.error}`,
-        result,
-      };
+      const message = result.success
+        ? `Output retrieved. Running: ${result.running}`
+        : `Failed: ${result.error}`;
 
-      return { content, state };
+      const state: GetCommandOutputState = { message, result };
+
+      return { content: result, state };
     });
   },
 

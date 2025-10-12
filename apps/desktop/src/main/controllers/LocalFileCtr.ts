@@ -1,4 +1,10 @@
 import {
+  EditLocalFileParams,
+  EditLocalFileResult,
+  GlobFilesParams,
+  GlobFilesResult,
+  GrepContentParams,
+  GrepContentResult,
   ListLocalFileParams,
   LocalMoveFilesResultItem,
   LocalReadFileParams,
@@ -13,6 +19,7 @@ import {
 } from '@lobechat/electron-client-ipc';
 import { SYSTEM_FILES_TO_IGNORE, loadFile } from '@lobechat/file-loaders';
 import { shell } from 'electron';
+import fg from 'fast-glob';
 import * as fs from 'node:fs';
 import { rename as renamePromise } from 'node:fs/promises';
 import * as path from 'node:path';
@@ -33,32 +40,14 @@ const readdirPromise = promisify(fs.readdir);
 const renamePromiseFs = promisify(fs.rename);
 const accessPromise = promisify(fs.access);
 const writeFilePromise = promisify(fs.writeFile);
+const readFilePromise = promisify(fs.readFile);
 
 export default class LocalFileCtr extends ControllerModule {
   private get searchService() {
     return this.app.getService(FileSearchService);
   }
 
-  /**
-   * Handle IPC event for local file search
-   */
-  @ipcClientEvent('searchLocalFiles')
-  async handleLocalFilesSearch(params: LocalSearchFilesParams): Promise<FileResult[]> {
-    logger.debug('Received file search request:', { keywords: params.keywords });
-
-    const options: Omit<SearchOptions, 'keywords'> = {
-      limit: 30,
-    };
-
-    try {
-      const results = await this.searchService.search(params.keywords, options);
-      logger.debug('File search completed', { count: results.length });
-      return results;
-    } catch (error) {
-      logger.error('File search failed:', error);
-      return [];
-    }
-  }
+  // ==================== File Operation ====================
 
   @ipcClientEvent('openLocalFile')
   async handleOpenLocalFile({ path: filePath }: OpenLocalFileParams): Promise<{
@@ -474,6 +463,252 @@ export default class LocalFileCtr extends ControllerModule {
       logger.error(`${logPrefix} Failed to write file:`, error);
       return {
         error: `Failed to write file: ${(error as Error).message}`,
+        success: false,
+      };
+    }
+  }
+
+  // ==================== Search & Find ====================
+
+  /**
+   * Handle IPC event for local file search
+   */
+  @ipcClientEvent('searchLocalFiles')
+  async handleLocalFilesSearch(params: LocalSearchFilesParams): Promise<FileResult[]> {
+    logger.debug('Received file search request:', { keywords: params.keywords });
+
+    const options: Omit<SearchOptions, 'keywords'> = {
+      limit: 30,
+    };
+
+    try {
+      const results = await this.searchService.search(params.keywords, options);
+      logger.debug('File search completed', { count: results.length });
+      return results;
+    } catch (error) {
+      logger.error('File search failed:', error);
+      return [];
+    }
+  }
+
+  @ipcClientEvent('grepContent')
+  async handleGrepContent(params: GrepContentParams): Promise<GrepContentResult> {
+    const {
+      pattern,
+      path: searchPath = process.cwd(),
+      output_mode = 'files_with_matches',
+    } = params;
+    const logPrefix = `[grepContent: ${pattern}]`;
+    logger.debug(`${logPrefix} Starting content search`, { output_mode, searchPath });
+
+    try {
+      const regex = new RegExp(
+        pattern,
+        `g${params['-i'] ? 'i' : ''}${params.multiline ? 's' : ''}`,
+      );
+
+      // Determine files to search
+      let filesToSearch: string[] = [];
+      const stats = await statPromise(searchPath);
+
+      if (stats.isFile()) {
+        filesToSearch = [searchPath];
+      } else {
+        // Use glob pattern if provided, otherwise search all files
+        const globPattern = params.glob || '**/*';
+        filesToSearch = await fg(globPattern, {
+          absolute: true,
+          cwd: searchPath,
+          dot: true,
+          ignore: ['**/node_modules/**', '**/.git/**'],
+        });
+
+        // Filter by type if provided
+        if (params.type) {
+          const ext = `.${params.type}`;
+          filesToSearch = filesToSearch.filter((file) => file.endsWith(ext));
+        }
+      }
+
+      logger.debug(`${logPrefix} Found ${filesToSearch.length} files to search`);
+
+      const matches: string[] = [];
+      let totalMatches = 0;
+
+      for (const filePath of filesToSearch) {
+        try {
+          const fileStats = await statPromise(filePath);
+          if (!fileStats.isFile()) continue;
+
+          const content = await readFilePromise(filePath, 'utf8');
+          const lines = content.split('\n');
+
+          switch (output_mode) {
+            case 'files_with_matches': {
+              if (regex.test(content)) {
+                matches.push(filePath);
+                totalMatches++;
+                if (params.head_limit && matches.length >= params.head_limit) break;
+              }
+              break;
+            }
+            case 'content': {
+              const matchedLines: string[] = [];
+              for (let i = 0; i < lines.length; i++) {
+                if (regex.test(lines[i])) {
+                  const contextBefore = params['-B'] || params['-C'] || 0;
+                  const contextAfter = params['-A'] || params['-C'] || 0;
+
+                  const startLine = Math.max(0, i - contextBefore);
+                  const endLine = Math.min(lines.length - 1, i + contextAfter);
+
+                  for (let j = startLine; j <= endLine; j++) {
+                    const lineNum = params['-n'] ? `${j + 1}:` : '';
+                    matchedLines.push(`${filePath}:${lineNum}${lines[j]}`);
+                  }
+                  totalMatches++;
+                }
+              }
+              matches.push(...matchedLines);
+              if (params.head_limit && matches.length >= params.head_limit) break;
+              break;
+            }
+            case 'count': {
+              const fileMatches = (content.match(regex) || []).length;
+              if (fileMatches > 0) {
+                matches.push(`${filePath}:${fileMatches}`);
+                totalMatches += fileMatches;
+              }
+              break;
+            }
+          }
+        } catch (error) {
+          logger.debug(`${logPrefix} Skipping file ${filePath}:`, error);
+        }
+      }
+
+      logger.info(`${logPrefix} Search completed`, {
+        matchCount: matches.length,
+        totalMatches,
+      });
+
+      return {
+        matches: params.head_limit ? matches.slice(0, params.head_limit) : matches,
+        success: true,
+        total_matches: totalMatches,
+      };
+    } catch (error) {
+      logger.error(`${logPrefix} Grep failed:`, error);
+      return {
+        matches: [],
+        success: false,
+        total_matches: 0,
+      };
+    }
+  }
+
+  @ipcClientEvent('globLocalFiles')
+  async handleGlobFiles({
+    path: searchPath = process.cwd(),
+    pattern,
+  }: GlobFilesParams): Promise<GlobFilesResult> {
+    const logPrefix = `[globFiles: ${pattern}]`;
+    logger.debug(`${logPrefix} Starting glob search`, { searchPath });
+
+    try {
+      const files = await fg(pattern, {
+        absolute: true,
+        cwd: searchPath,
+        dot: true,
+        onlyFiles: false,
+        stats: true,
+      });
+
+      // Sort by modification time (most recent first)
+      const sortedFiles = (files as unknown as Array<{ path: string; stats: fs.Stats }>)
+        .sort((a, b) => b.stats.mtime.getTime() - a.stats.mtime.getTime())
+        .map((f) => f.path);
+
+      logger.info(`${logPrefix} Glob completed`, { fileCount: sortedFiles.length });
+
+      return {
+        files: sortedFiles,
+        success: true,
+        total_files: sortedFiles.length,
+      };
+    } catch (error) {
+      logger.error(`${logPrefix} Glob failed:`, error);
+      return {
+        files: [],
+        success: false,
+        total_files: 0,
+      };
+    }
+  }
+
+  // ==================== File Editing ====================
+
+  @ipcClientEvent('editLocalFile')
+  async handleEditFile({
+    file_path: filePath,
+    new_string,
+    old_string,
+    replace_all = false,
+  }: EditLocalFileParams): Promise<EditLocalFileResult> {
+    const logPrefix = `[editFile: ${filePath}]`;
+    logger.debug(`${logPrefix} Starting file edit`, { replace_all });
+
+    try {
+      // Read file content
+      const content = await readFilePromise(filePath, 'utf8');
+
+      // Check if old_string exists
+      if (!content.includes(old_string)) {
+        logger.error(`${logPrefix} Old string not found in file`);
+        return {
+          error: 'The specified old_string was not found in the file',
+          replacements: 0,
+          success: false,
+        };
+      }
+
+      // Perform replacement
+      let newContent: string;
+      let replacements: number;
+
+      if (replace_all) {
+        const regex = new RegExp(old_string.replaceAll(/[$()*+.?[\\\]^{|}]/g, '\\$&'), 'g');
+        const matches = content.match(regex);
+        replacements = matches ? matches.length : 0;
+        newContent = content.replaceAll(old_string, new_string);
+      } else {
+        // Replace only first occurrence
+        const index = content.indexOf(old_string);
+        if (index === -1) {
+          return {
+            error: 'Old string not found',
+            replacements: 0,
+            success: false,
+          };
+        }
+        newContent =
+          content.slice(0, index) + new_string + content.slice(index + old_string.length);
+        replacements = 1;
+      }
+
+      // Write back to file
+      await writeFilePromise(filePath, newContent, 'utf8');
+
+      logger.info(`${logPrefix} File edited successfully`, { replacements });
+      return {
+        replacements,
+        success: true,
+      };
+    } catch (error) {
+      logger.error(`${logPrefix} Edit failed:`, error);
+      return {
+        error: (error as Error).message,
+        replacements: 0,
         success: false,
       };
     }

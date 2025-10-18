@@ -137,11 +137,11 @@ Return the suggestions in the specified JSON format.`;
             meta: {},
             role: 'user',
             updatedAt: Date.now(),
-          } as ChatMessage,
+          } as any,
         ],
         model,
         provider,
-        schema: SuggestionsSchema,
+        schema: SuggestionsSchema as any,
       },
       abortController,
     );

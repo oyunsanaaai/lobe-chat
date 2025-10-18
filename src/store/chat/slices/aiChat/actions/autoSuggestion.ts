@@ -32,7 +32,7 @@ export const chatAutoSuggestion: StateCreator<
 
     if (!message || message.role !== 'assistant') return;
 
-    // Get agent configuration
+    // Get agent configuration for systemRole and autoSuggestion config
     const agentState = useAgentStore.getState();
     const agentConfig = agentSelectors.currentAgentConfig(agentState);
 
@@ -54,10 +54,8 @@ export const chatAutoSuggestion: StateCreator<
 
       const suggestions = await aiChatService.generateSuggestion(
         {
-          autoSuggestionConfig: agentConfig.chatConfig.autoSuggestion,
+          maxSuggestions: agentConfig.chatConfig.autoSuggestion.maxSuggestions,
           messages,
-          model: agentConfig.model,
-          provider: agentConfig.provider!,
           systemRole: agentConfig.systemRole,
         },
         abortController,

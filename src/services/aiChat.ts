@@ -5,6 +5,8 @@ import { cleanObject } from '@lobechat/utils';
 
 import { lambdaClient } from '@/libs/trpc/client';
 import { createXorKeyVaultsPayload } from '@/services/_auth';
+import { useUserStore } from '@/store/user';
+import { systemAgentSelectors } from '@/store/user/slices/settings/selectors';
 import { ChatMessage, ChatSuggestion } from '@/types/message';
 
 const SuggestionsSchema = {
@@ -14,11 +16,7 @@ const SuggestionsSchema = {
     additionalProperties: false,
     properties: {
       suggestions: {
-        items: {
-          maxLength: 60,
-          type: 'string',
-        },
-        maxItems: 3,
+        items: { type: 'string' },
         type: 'array',
       },
     },
@@ -29,13 +27,8 @@ const SuggestionsSchema = {
 };
 
 interface GenerateSuggestionParams {
-  autoSuggestionConfig: {
-    customPrompt?: string;
-    maxSuggestions?: number;
-  };
+  maxSuggestions?: number;
   messages: ChatMessage[];
-  model: string;
-  provider: string;
   systemRole?: string;
 }
 
@@ -66,16 +59,19 @@ class AiChatService {
   generateSuggestion = async (
     params: GenerateSuggestionParams,
     abortController: AbortController,
-  ): Promise<ChatSuggestion[]> => {
-    const { autoSuggestionConfig, messages, model, provider, systemRole } = params;
+  ): Promise<ChatSuggestion[] | undefined> => {
+    const { maxSuggestions, messages, systemRole } = params;
+
+    // Get system agent configuration for model and provider
+    const userState = useUserStore.getState();
+    const systemAgentConfig = systemAgentSelectors.autoSuggestion(userState);
+    const { model, provider, customPrompt, enabled } = systemAgentConfig;
+
+    console.log(systemAgentConfig);
+    if (!enabled) return;
 
     // Build prompt using Prompt Layer
-    const prompt = autoSuggestionPrompt({
-      customPrompt: autoSuggestionConfig.customPrompt,
-      maxSuggestions: autoSuggestionConfig.maxSuggestions,
-      messages,
-      systemRole,
-    });
+    const prompt = autoSuggestionPrompt({ customPrompt, maxSuggestions, messages, systemRole });
 
     // Process messages with ContextEngine
     const contextEngine = new ContextEngine({

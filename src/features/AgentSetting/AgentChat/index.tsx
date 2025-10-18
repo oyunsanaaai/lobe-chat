@@ -1,7 +1,7 @@
 'use client';
 
 import { Form, type FormGroupItemType, ImageSelect, SliderWithInput, TextArea } from '@lobehub/ui';
-import { Form as AForm, Input, Radio, Switch } from 'antd';
+import { Form as AForm, Radio, Switch } from 'antd';
 import { useThemeMode } from 'antd-style';
 import isEqual from 'fast-deep-equal';
 import { LayoutList, MessagesSquare } from 'lucide-react';
@@ -126,20 +126,6 @@ const AgentChat = memo(() => {
         hidden: !enableAutoSuggestion,
         label: t('agent.autoSuggestion.maxSuggestions.title'),
         name: [AUTO_SUGGESTION_SETTING_KEY, 'maxSuggestions'],
-      },
-
-      // 高级设置
-      {
-        children: (
-          <Input.TextArea
-            placeholder={t('agent.autoSuggestion.customPrompt.placeholder')}
-            rows={4}
-          />
-        ),
-        desc: t('agent.autoSuggestion.customPrompt.desc'),
-        hidden: !enableAutoSuggestion,
-        label: t('agent.autoSuggestion.customPrompt.title'),
-        name: [AUTO_SUGGESTION_SETTING_KEY, 'customPrompt'],
       },
     ],
     title: t('settingChat.title'),

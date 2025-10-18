@@ -640,6 +640,11 @@ export default {
       modelDesc: '指定用于生成助理名称、描述、头像、标签的模型',
       title: '自动生成助理信息',
     },
+    autoSuggestion: {
+      label: '智能建议模型',
+      modelDesc: '指定用于生成消息智能建议的模型',
+      title: '消息智能建议',
+    },
     customPrompt: {
       addPrompt: '添加自定义提示',
       desc: '填写后，系统助理将在生成内容时使用自定义提示',

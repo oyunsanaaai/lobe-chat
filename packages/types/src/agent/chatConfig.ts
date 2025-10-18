@@ -14,10 +14,6 @@ export interface LobeAutoSuggestion {
    */
   enabled?: boolean;
   /**
-   * Custom prompt for generating suggestions
-   */
-  customPrompt?: string;
-  /**
    * Maximum number of suggestions to generate
    * Range: 1-3 (based on issue #889)
    * @default 3
@@ -90,7 +86,6 @@ export const AgentChatConfigSchema = z.object({
   autoCreateTopicThreshold: z.number().default(2),
   autoSuggestion: z
     .object({
-      customPrompt: z.string().optional(),
       enabled: z.boolean().optional(),
       maxSuggestions: z.number().min(1).max(3).optional(),
     })

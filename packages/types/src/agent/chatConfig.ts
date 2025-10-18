@@ -7,6 +7,23 @@ export interface WorkingModel {
   model: string;
   provider: string;
 }
+export interface LobeAutoSuggestion {
+  /**
+   * Enable auto suggestions
+   * @default false
+   */
+  enabled?: boolean;
+  /**
+   * Custom prompt for generating suggestions
+   */
+  customPrompt?: string;
+  /**
+   * Maximum number of suggestions to generate
+   * Range: 1-3 (based on issue #889)
+   * @default 3
+   */
+  maxSuggestions?: number;
+}
 
 export interface LobeAgentChatConfig {
   displayMode?: 'chat' | 'docs';
@@ -65,20 +82,7 @@ export interface LobeAgentChatConfig {
   /**
    * Auto suggestion configuration
    */
-  autoSuggestion?: {
-    /**
-     * Enable auto suggestions
-     */
-    enabled?: boolean;
-    /**
-     * Custom prompt for generating suggestions
-     */
-    customPrompt?: string;
-    /**
-     * Maximum number of suggestions to generate
-     */
-    maxSuggestions?: number;
-  };
+  autoSuggestion?: LobeAutoSuggestion;
 }
 /* eslint-enable */
 
@@ -88,7 +92,7 @@ export const AgentChatConfigSchema = z.object({
     .object({
       customPrompt: z.string().optional(),
       enabled: z.boolean().optional(),
-      maxSuggestions: z.number().optional(),
+      maxSuggestions: z.number().min(1).max(3).optional(),
     })
     .optional(),
   displayMode: z.enum(['chat', 'docs']).optional(),

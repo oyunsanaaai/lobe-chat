@@ -7,7 +7,7 @@ import { lambdaClient } from '@/libs/trpc/client';
 import { createXorKeyVaultsPayload } from '@/services/_auth';
 import { useUserStore } from '@/store/user';
 import { systemAgentSelectors } from '@/store/user/slices/settings/selectors';
-import { ChatMessage, ChatSuggestion } from '@/types/message';
+import { ChatMessage } from '@/types/message';
 
 const SuggestionsSchema = {
   description: 'Auto-generated suggestions for chat messages',
@@ -17,6 +17,7 @@ const SuggestionsSchema = {
     properties: {
       suggestions: {
         items: { type: 'string' },
+        maxItems: 3,
         type: 'array',
       },
     },
@@ -59,7 +60,7 @@ class AiChatService {
   generateSuggestion = async (
     params: GenerateSuggestionParams,
     abortController: AbortController,
-  ): Promise<ChatSuggestion[] | undefined> => {
+  ): Promise<string[] | undefined> => {
     const { maxSuggestions, messages, systemRole } = params;
 
     // Get system agent configuration for model and provider
@@ -67,7 +68,6 @@ class AiChatService {
     const systemAgentConfig = systemAgentSelectors.autoSuggestion(userState);
     const { model, provider, customPrompt, enabled } = systemAgentConfig;
 
-    console.log(systemAgentConfig);
     if (!enabled) return;
 
     // Build prompt using Prompt Layer
@@ -97,7 +97,7 @@ class AiChatService {
     });
 
     // Call AI service
-    const result = await this.generateJSON(
+    const result = (await this.generateJSON(
       {
         messages: processedMessages,
         model,
@@ -105,14 +105,10 @@ class AiChatService {
         schema: SuggestionsSchema,
       },
       abortController,
-    );
+    )) as { suggestions: string[] };
 
     // Parse suggestions
-    const suggestionsData = result.object as { suggestions: string[] };
-    return suggestionsData.suggestions.map((text, index) => ({
-      id: `suggestion-${Date.now()}-${index}`,
-      text,
-    }));
+    return result.suggestions;
   };
 
   // sendGroupMessageInServer = async (params: SendMessageServerParams) => {

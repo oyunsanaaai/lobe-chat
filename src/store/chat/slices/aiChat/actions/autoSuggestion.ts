@@ -1,10 +1,11 @@
+import { AutoSuggestionsUserActions, ChatMessage } from '@lobechat/types';
 import { StateCreator } from 'zustand/vanilla';
 
 import { aiChatService } from '@/services/aiChat';
+import { messageService } from '@/services/message';
 import { useAgentStore } from '@/store/agent';
 import { agentSelectors } from '@/store/agent/selectors';
 import { ChatStore } from '@/store/chat/store';
-import { ChatAutoSuggestions, ChatMessage } from '@/types/message';
 
 import { chatSelectors } from '../../../selectors';
 
@@ -16,7 +17,10 @@ export interface ChatAutoSuggestionAction {
   /**
    * Update suggestions for a message
    */
-  updateMessageSuggestions: (messageId: string, suggestions: ChatAutoSuggestions) => Promise<void>;
+  updateAutoSuggestionChoices: (
+    id: string,
+    autoSuggestions: AutoSuggestionsUserActions,
+  ) => Promise<void>;
 }
 
 export const chatAutoSuggestion: StateCreator<
@@ -83,24 +87,19 @@ export const chatAutoSuggestion: StateCreator<
     }
   },
 
-  updateMessageSuggestions: async (messageId: string, suggestions: ChatAutoSuggestions) => {
+  updateAutoSuggestionChoices: async (messageId: string, userFeedback) => {
     const { internal_dispatchMessage } = get();
-    const messages = chatSelectors.activeBaseChats(get());
-    const message = messages.find((msg: ChatMessage) => msg.id === messageId);
+    const message = chatSelectors.getMessageById(messageId)(get());
 
-    if (!message) {
-      return;
-    }
+    if (!message) return;
 
     internal_dispatchMessage({
       id: messageId,
-      type: 'updateMessage',
-      value: {
-        extra: {
-          ...message.extra,
-          autoSuggestions: suggestions,
-        },
-      },
+      key: 'autoSuggestions',
+      type: 'updateMessageExtra',
+      value: undefined,
     });
+
+    await messageService.updateMessageMetadata(messageId, { autoSuggestions: userFeedback });
   },
 });

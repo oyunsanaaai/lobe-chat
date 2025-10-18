@@ -39,24 +39,24 @@ export interface ChatFileChunk {
 
 export interface ChatSuggestion {
   /**
-   * Suggestion text to display
-   */
-  text: string;
-  /**
    * Optional identifier for tracking
    */
   id?: string;
+  /**
+   * Suggestion text to display
+   */
+  text: string;
 }
 
 export interface ChatAutoSuggestions {
   /**
-   * List of suggested questions
-   */
-  suggestions: ChatSuggestion[];
-  /**
    * Whether suggestions are currently being generated
    */
   loading?: boolean;
+  /**
+   * List of suggested questions
+   */
+  suggestions: string[];
 }
 
 export interface ChatMessageExtra {

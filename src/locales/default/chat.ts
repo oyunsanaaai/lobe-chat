@@ -252,7 +252,6 @@ export default {
     nextMessage: '下一条消息',
     previousMessage: '上一条消息',
   },
-
   newAgent: '新建助手',
 
   newGroupChat: '新建群聊',
@@ -284,6 +283,7 @@ export default {
   },
 
   regenerate: '重新生成',
+
   roleAndArchive: '角色与记录',
   search: {
     grounding: {
@@ -354,6 +354,9 @@ export default {
     action: '语音输入',
     loading: '识别中...',
     prettifying: '润色中...',
+  },
+  suggestions: {
+    title: '试试继续问：',
   },
   supervisor: {
     todoList: {

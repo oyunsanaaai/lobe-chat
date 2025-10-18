@@ -518,7 +518,14 @@ export const generateAIChatV2: StateCreator<
       }
     }
 
-    // 6. summary history if context messages is larger than historyCount
+    // 6. Generate auto-suggestions after message completion
+    get()
+      .generateSuggestions(assistantId)
+      .catch((error) => {
+        console.error('Error generating auto-suggestions:', error);
+      });
+
+    // 7. summary history if context messages is larger than historyCount
     const historyCount = agentChatConfigSelectors.historyCount(agentStoreState);
 
     if (

@@ -1,18 +1,12 @@
-import { autoSuggestionPrompt } from '@lobechat/prompts';
-import { z } from 'zod';
 import { StateCreator } from 'zustand/vanilla';
 
 import { aiChatService } from '@/services/aiChat';
 import { useAgentStore } from '@/store/agent';
 import { agentSelectors } from '@/store/agent/selectors';
 import { ChatStore } from '@/store/chat/store';
-import { ChatAutoSuggestions, ChatMessage, ChatSuggestion } from '@/types/message';
+import { ChatAutoSuggestions, ChatMessage } from '@/types/message';
 
-import { chatSelectors } from '../../selectors';
-
-const SuggestionsSchema = z.object({
-  suggestions: z.array(z.string().max(60)).max(3),
-});
+import { chatSelectors } from '../../../selectors';
 
 export interface ChatAutoSuggestionAction {
   /**
@@ -36,88 +30,47 @@ export const chatAutoSuggestion: StateCreator<
     const messages = chatSelectors.activeBaseChats(get());
     const message = messages.find((msg: ChatMessage) => msg.id === messageId);
 
-    if (!message || message.role !== 'assistant') {
-      return;
-    }
+    if (!message || message.role !== 'assistant') return;
 
     // Get agent configuration
     const agentState = useAgentStore.getState();
     const agentConfig = agentSelectors.currentAgentConfig(agentState);
 
     // Check if auto-suggestions are enabled
-    if (!agentConfig.chatConfig.autoSuggestion?.enabled) {
-      return;
-    }
+    if (!agentConfig.chatConfig.autoSuggestion?.enabled) return;
 
     try {
       // Set loading state
       internal_dispatchMessage({
         id: messageId,
-        type: 'updateMessage',
-        value: {
-          extra: {
-            ...message.extra,
-            autoSuggestions: {
-              loading: true,
-              suggestions: [],
-            },
-          },
-        },
-      });
-
-      // Build prompt using Prompt Layer
-      const prompt = autoSuggestionPrompt({
-        customPrompt: agentConfig.chatConfig.autoSuggestion.customPrompt,
-        maxSuggestions: agentConfig.chatConfig.autoSuggestion.maxSuggestions,
-        messages,
-        systemRole: agentConfig.systemRole,
+        key: 'autoSuggestions',
+        type: 'updateMessageExtra',
+        value: { loading: true, suggestions: [] },
       });
 
       // Call AI service with 10 second timeout
       const abortController = new AbortController();
       const timeoutId = setTimeout(() => abortController.abort(), 10_000);
 
-      const result = await aiChatService.generateJSON(
+      const suggestions = await aiChatService.generateSuggestion(
         {
-          messages: [
-            {
-              content: prompt,
-              createdAt: Date.now(),
-              id: 'temp-suggestion-msg',
-              meta: {},
-              role: 'user',
-              updatedAt: Date.now(),
-            } as any,
-          ],
+          autoSuggestionConfig: agentConfig.chatConfig.autoSuggestion,
+          messages,
           model: agentConfig.model,
-          provider: agentConfig.provider || 'openai',
-          schema: SuggestionsSchema as any,
+          provider: agentConfig.provider!,
+          systemRole: agentConfig.systemRole,
         },
         abortController,
       );
 
       clearTimeout(timeoutId);
 
-      // Parse suggestions
-      const suggestionsData = result.object as { suggestions: string[] };
-      const suggestions: ChatSuggestion[] = suggestionsData.suggestions.map((text, index) => ({
-        id: `suggestion-${Date.now()}-${index}`,
-        text,
-      }));
-
       // Update message with suggestions
       internal_dispatchMessage({
         id: messageId,
-        type: 'updateMessage',
-        value: {
-          extra: {
-            ...message.extra,
-            autoSuggestions: {
-              loading: false,
-              suggestions,
-            },
-          },
-        },
+        key: 'autoSuggestions',
+        type: 'updateMessageExtra',
+        value: { loading: false, suggestions },
       });
     } catch (error) {
       console.error('Failed to generate suggestions:', error);
@@ -125,13 +78,9 @@ export const chatAutoSuggestion: StateCreator<
       // Silent failure: remove autoSuggestions completely
       internal_dispatchMessage({
         id: messageId,
-        type: 'updateMessage',
-        value: {
-          extra: {
-            ...message.extra,
-            autoSuggestions: undefined,
-          },
-        },
+        key: 'autoSuggestions',
+        type: 'updateMessageExtra',
+        value: undefined,
       });
     }
   },

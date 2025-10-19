@@ -1,5 +1,8 @@
 import type { ChatMessage } from '@lobechat/types';
 
+export const DEFAULT_AUTO_SUGGESTION =
+  'Generate relevant follow-up questions that naturally extend the conversation. Focus on exploring different aspects of the topic, providing actionable next steps, or diving deeper into related areas.';
+
 export interface AutoSuggestionPromptOptions {
   customPrompt?: string;
   maxSuggestions?: number;

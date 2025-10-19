@@ -10,7 +10,7 @@ export interface WorkingModel {
 export interface LobeAutoSuggestion {
   /**
    * Enable auto suggestions
-   * @default false
+   * @default true
    */
   enabled?: boolean;
   /**

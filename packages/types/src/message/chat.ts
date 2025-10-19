@@ -37,17 +37,6 @@ export interface ChatFileChunk {
   text: string;
 }
 
-export interface ChatSuggestion {
-  /**
-   * Optional identifier for tracking
-   */
-  id?: string;
-  /**
-   * Suggestion text to display
-   */
-  text: string;
-}
-
 export interface ChatAutoSuggestions {
   /**
    * Whether suggestions are currently being generated

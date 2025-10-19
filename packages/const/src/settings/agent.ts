@@ -24,7 +24,7 @@ export const DEFAULT_AGENT_SEARCH_FC_MODEL = {
 };
 
 export const DEFAULT_AUTO_SUGGESTION: LobeAutoSuggestion = {
-  enabled: false,
+  enabled: true,
   maxSuggestions: 3,
 };
 

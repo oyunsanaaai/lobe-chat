@@ -68,7 +68,7 @@ class AiChatService {
     const systemAgentConfig = systemAgentSelectors.autoSuggestion(userState);
     const { model, provider, customPrompt, enabled } = systemAgentConfig;
 
-    if (!enabled) return;
+    if (enabled === false) return;
 
     // Build prompt using Prompt Layer
     const prompt = autoSuggestionPrompt({ customPrompt, maxSuggestions, messages, systemRole });

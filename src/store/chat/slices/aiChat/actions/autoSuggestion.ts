@@ -10,6 +10,7 @@ import { ChatStore } from '@/store/chat/store';
 import { chatSelectors } from '../../../selectors';
 
 export interface ChatAutoSuggestionAction {
+  clearAutoSuggestions: (id: string) => void;
   /**
    * Generate auto-suggestions for a message
    */
@@ -29,6 +30,15 @@ export const chatAutoSuggestion: StateCreator<
   [],
   ChatAutoSuggestionAction
 > = (set, get) => ({
+  clearAutoSuggestions: (id) => {
+    get().internal_dispatchMessage({
+      id: id,
+      key: 'autoSuggestions',
+      type: 'updateMessageExtra',
+      value: undefined,
+    });
+  },
+
   generateSuggestions: async (messageId: string) => {
     const { internal_dispatchMessage } = get();
     const messages = chatSelectors.activeBaseChats(get());
@@ -78,27 +88,16 @@ export const chatAutoSuggestion: StateCreator<
       console.error('Failed to generate suggestions:', error);
 
       // Silent failure: remove autoSuggestions completely
-      internal_dispatchMessage({
-        id: messageId,
-        key: 'autoSuggestions',
-        type: 'updateMessageExtra',
-        value: undefined,
-      });
+      get().clearAutoSuggestions(messageId);
     }
   },
-
   updateAutoSuggestionChoices: async (messageId: string, userFeedback) => {
-    const { internal_dispatchMessage } = get();
+    const { clearAutoSuggestions } = get();
     const message = chatSelectors.getMessageById(messageId)(get());
 
     if (!message) return;
 
-    internal_dispatchMessage({
-      id: messageId,
-      key: 'autoSuggestions',
-      type: 'updateMessageExtra',
-      value: undefined,
-    });
+    clearAutoSuggestions(messageId);
 
     await messageService.updateMessageMetadata(messageId, { autoSuggestions: userFeedback });
   },

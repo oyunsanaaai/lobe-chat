@@ -516,16 +516,17 @@ export const generateAIChatV2: StateCreator<
           console.error('Desktop notification error:', error);
         }
       }
+      // Generate auto-suggestions after message completion
+      if (!isFunctionCall) {
+        get()
+          .generateSuggestions(assistantId)
+          .catch((error) => {
+            console.error('Error generating auto-suggestions:', error);
+          });
+      }
     }
 
-    // 6. Generate auto-suggestions after message completion
-    get()
-      .generateSuggestions(assistantId)
-      .catch((error) => {
-        console.error('Error generating auto-suggestions:', error);
-      });
-
-    // 7. summary history if context messages is larger than historyCount
+    // 6. summary history if context messages is larger than historyCount
     const historyCount = agentChatConfigSelectors.historyCount(agentStoreState);
 
     if (
